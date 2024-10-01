@@ -15,6 +15,7 @@ from time import sleep
 import serial
 import serial.tools.list_ports
 import csv
+from datetime import date
 
 # env_filename=os.getenv('ZWO_ASI_LIB') #initialize camera and find its directory where it is located 
 # asi.init('C:\\Users\\ASE\\Desktop\\Ari Lab-2023\\Pics\\ASIStudio\\ASICamera2.dll') #directory of camera 
@@ -330,7 +331,6 @@ class ImageProcessorApp:
                 current_DAC = self.dac_values[-1] # use the last input to find the current dac count
                 delta_DACx = abs(current_DAC[0]-previous_DAC[0]) # subtract these for both the x and y to find the change in dac
                 delta_DACy = abs(current_DAC[1]-previous_DAC[1])
-
                 
                 print(f'Dac values{self.dac_values}')
                 print(f'Change in DAC {delta_DACx} in X and {delta_DACy} in Y')
@@ -398,7 +398,8 @@ class ImageProcessorApp:
         frame.canvas.image = image_tk
 
     def update_plot(self): #actively updates the plot as the new images are processed
-        self.ax.set_title("Fiber Tip Centers")
+        current_date = date.today()
+        self.ax.set_title(f'Fiber Tip Centers, {current_date}')
         self.ax.set_xlabel("X")
         self.ax.set_ylabel("Y")
         plt.gca().invert_xaxis()
