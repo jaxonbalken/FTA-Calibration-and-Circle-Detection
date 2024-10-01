@@ -257,33 +257,12 @@ class ImageProcessorApp:
                 else:
                     messagebox.showerror("Error", "Failed to capture image from camera after multiple attempts.")
 
-    def extend_image(image, border_size):
-        """Extend the image by adding a border of size `border_size`."""
-        extended_image = cv2.copyMakeBorder(
-            image,
-            top=border_size,
-            bottom=border_size,
-            left=border_size,
-            right=border_size,
-            borderType=cv2.BORDER_REFLECT
-        )
-        return extended_image
-    
     def process_image(self):
             if self.original_image is None:
                 messagebox.showerror("Error", "No image captured")
                 return
         
             output = self.original_image.copy()
-
-            #conevrt to grayscale
-            #gray_image = cv2.cvtColor(self.original_image, cv2.COLOR_BGR2GRAY)
-            
-            # Apply Gaussian Blur
-            #blur_image = cv2.GaussianBlur(self.original_image, (9, 9), 0)
-
-            # Canny Edge Detection
-            #edged_image = cv2.Canny(blur_image, 75, 150)
 
             # convert the grayscale image to binary image
             ret,thresh = cv2.threshold(self.original_image,127,255,0)
@@ -302,10 +281,10 @@ class ImageProcessorApp:
             #  display the image
             #cv2.imshow("Image", output)
             cv2.waitKey(0)
-            print(cX)
-            print(cY)
+            # print(cX)
+            # print(cY)
             self.circle_centers.append((cX, cY))
-            circle_radius = 5
+            circle_radius = 37
             # Crop the output back to the original image size
             # Add to data storage with element number
             element = int(self.selected_element.get())
@@ -325,6 +304,7 @@ class ImageProcessorApp:
             self.processed_image = color_mapped_image #assign value to new image so it can be displayed. idk why i did this i realize now that this is not needed 
             self.display_image(self.processed_image, self.frame_processed)
             self.update_plot()  # Update the existing plot with new data
+            
             if len(self.circle_centers) > 1:
                 previous_center = self.circle_centers[-2] # second most recent input in the list 
                 current_center = self.circle_centers[-1] #most recent input in the list 
@@ -390,8 +370,8 @@ class ImageProcessorApp:
         # Optionally clear the plots
         self.ax.clear()
         self.ax.set_title("Fiber Tip Centers")
-        self.ax.set_xlabel("X")
-        self.ax.set_ylabel("Y")
+        self.ax.set_xlabel("X Pixels")
+        self.ax.set_ylabel("Y Pixels")
         self.canvas.draw()
 
 
@@ -435,14 +415,6 @@ class ImageProcessorApp:
         #min is 559 for x and y dac values
         #max is 3537 for x and y dac values 
         print('Automation Started...')
-
-        print('Taking photo')
-        self.capture_image_from_camera()
-        print('Processing Image')
-        sleep(2)
-        self.process_image()
-        print('Image processed, waiting for next round')
-        sleep(10)
 
         print('Turning Amp On')
         self.amp_on()
@@ -518,24 +490,25 @@ class ImageProcessorApp:
         self.process_image()
         sleep(8)
         
-        # for i in range(600,3500,200):
-        #     self.set_DAC(i,2047)
-        #     sleep(5)
-        #     print('Taking photo')
-        #     self.capture_image_from_camera()
-        #     print('Processing Image')
-        #     self.process_image()
-        #     sleep(8)
+        for i in range(600,3500,200):
+            self.set_DAC(i,2047)
+            sleep(6)
+            print('Taking photo')
+            self.capture_image_from_camera()
+            print('Processing Image')
+            self.process_image()
+            sleep(8)
 
-        # for i in range(600,3500,200):
-        #     self.set_DAC(2047,i)
-        #     sleep(5)
-        #     print('Taking photo')
-        #     self.capture_image_from_camera()
-        #     print('Processing Image')
-        #     self.process_image()
-        #     sleep(8)
+        for i in range(600,3500,200):
+            self.set_DAC(2047,i)
+            sleep(6)
+            print('Taking photo')
+            self.capture_image_from_camera()
+            print('Processing Image')
+            self.process_image()
+            sleep(8)
 
+        self.set_DAC(2047,2047)
         self.amp_off()
         self.capture_image_from_camera()
         print('Processing Image')
