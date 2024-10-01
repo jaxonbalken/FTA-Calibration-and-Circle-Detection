@@ -612,13 +612,6 @@ if __name__ == "__main__":
     # 32 microsecond to 2000s exposure time
     # Focal Distace : 8.5mm or 0.0084m
 
-# Thin Lens Equation
-    #we know the focal length
-    # we dont know how far away the object is from the camera
-    # but if we know that the size of the pixles from the camera are 2.9 microns/pixel
-    # we can find the magnification of the image 
-    # the magninfiaction of the image should tell us how far the object is away fron the lense
-
 # Gameplan 
     #find the calibration of the microns to pixles. we know the size of the clading, and cointed the pixle raduis
     #have the DAC go through a set of steps . X and Y values, take a step, wait, then take a picture and process it.\
