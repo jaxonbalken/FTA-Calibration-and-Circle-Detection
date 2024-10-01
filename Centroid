@@ -230,11 +230,11 @@ class ImageProcessorApp:
                 print(f'Attempt {attempt + 1} of {max_retries} to capture image.')
 
                 # Set exposure time (in microseconds)
-                exposure_time = 53000
+                exposure_time = 12000
                 self.camera.set_control_value(asi.ASI_EXPOSURE, exposure_time)
 
                 # Define the gain value (adjust as needed, example value)
-                gain_value = 160  # This could be a value between 0 and 600 for this camera
+                gain_value = 1  # This could be a value between 0 and 600 for this camera
                 self.camera.set_control_value(asi.ASI_GAIN, gain_value)
 
                 print('Capturing Image...')
@@ -276,76 +276,36 @@ class ImageProcessorApp:
         
             output = self.original_image.copy()
 
+            #conevrt to grayscale
+            #gray_image = cv2.cvtColor(self.original_image, cv2.COLOR_BGR2GRAY)
+            
             # Apply Gaussian Blur
-            blur_image = cv2.GaussianBlur(self.original_image, (9, 9), 0)
+            #blur_image = cv2.GaussianBlur(self.original_image, (9, 9), 0)
 
             # Canny Edge Detection
-            edged_image = cv2.Canny(blur_image, 75, 150)
+            #edged_image = cv2.Canny(blur_image, 75, 150)
 
-            height, width = edged_image.shape
-            radii = 100
-            acc_array = np.zeros((height, width, radii))
-            filter3D = np.ones((40, 40, radii))
+            # convert the grayscale image to binary image
+            ret,thresh = cv2.threshold(self.original_image,127,255,0)
+            
+            # calculate moments of binary image
+            M = cv2.moments(thresh)
 
-            def fill_acc_array(x0, y0, radius):
-                x = radius
-                y = 0
-                decision = 1 - x
-                while y <= x:
-                    if 0 <= x + x0 < height and 0 <= y + y0 < width:
-                        acc_array[x + x0, y + y0, radius] += 1
-                    if 0 <= y + x0 < height and 0 <= x + y0 < width:
-                        acc_array[y + x0, x + y0, radius] += 1
-                    if 0 <= -x + x0 < height and 0 <= y + y0 < width:
-                        acc_array[-x + x0, y + y0, radius] += 1
-                    if 0 <= -y + x0 < height and 0 <= x + y0 < width:
-                        acc_array[-y + x0, x + y0, radius] += 1
-                    if 0 <= -x + x0 < height and 0 <= -y + y0 < width:
-                        acc_array[-x + x0, -y + y0, radius] += 1
-                    if 0 <= -y + x0 < height and 0 <= -x + y0 < width:
-                        acc_array[-y + x0, -x + y0, radius] += 1
-                    if 0 <= x + x0 < height and 0 <= -y + y0 < width:
-                        acc_array[x + x0, -y + y0, radius] += 1
-                    if 0 <= y + x0 < height and 0 <= -x + y0 < width:
-                        acc_array[y + x0, -x + y0, radius] += 1
-                    y += 1
-                    if decision <= 0:
-                        decision += 2 * y + 1
-                    else:
-                        x -= 1
-                        decision += 2 * (y - x) + 1
-
-            edges = np.where(edged_image == 255)
-            global circle_radius
-            circle_radius = int()
-            for i in range(len(edges[0])):
-                x = edges[0][i]
-                y = edges[1][i]
-                for radius in range(20, 55):
-                    fill_acc_array(x, y, radius)
-
-            i = 0
-            while i < height - 40:
-                j = 0
-                while j < width - 40:
-                    filter3D = acc_array[i:i+40, j:j+40, :] * filter3D
-                    max_pt = np.where(filter3D == filter3D.max())
-                    a = int(max_pt[0][0])
-                    b = int(max_pt[1][0])
-                    c = int(max_pt[2][0])
-                    b = b + j
-                    a = a + i
-                    if filter3D.max() > 90:
-                        if (b, a) not in self.circle_centers:
-                            # Draw circles on the extended image
-                            cv2.circle(output, (b, a), c, (0, 255, 0), 2)
-                            cv2.circle(output, (b, a), 3, (0, 0, 255), -1)
-                            self.circle_centers.append((b, a))
-                            circle_radius = c
-                    j += 30
-                    filter3D[:, :, :] = 1
-                i += 30
-
+            # calculate x,y coordinate of center
+            cX = int(M["m10"] / M["m00"])
+            cY = int(M["m01"] / M["m00"])
+            
+            # put text and highlight the center
+            cv2.circle(output, (cX, cY), 5, (0, 255, 255), -1)
+            cv2.putText(output, "centroid", (cX - 25, cY - 25),cv2.FONT_HERSHEY_SIMPLEX, 0.5, (0, 255, 255), 2)
+            #
+            #  display the image
+            #cv2.imshow("Image", output)
+            cv2.waitKey(0)
+            print(cX)
+            print(cY)
+            self.circle_centers.append((cX, cY))
+            circle_radius = 5
             # Crop the output back to the original image size
             # Add to data storage with element number
             element = int(self.selected_element.get())
