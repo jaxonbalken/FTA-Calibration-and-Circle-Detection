@@ -460,7 +460,7 @@ class ImageProcessorApp:
         self.process_image()
         sleep(10)
 
-        self.set_DAC(3537,1200)
+        self.set_DAC(3537,559)
         print('Waiting for Fiber Tip to Move... ')
         sleep(20)
         print('Taking photo')
