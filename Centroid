@@ -103,7 +103,7 @@ class ImageProcessorApp:
         self.process_button = tk.Button(self.button_frame, text="Process Image", command=self.process_image) #button for processing image 
         self.process_button.pack(side=tk.LEFT, padx=5, pady=5)
 
-        self.automate_button = tk.Button(self.button_frame, text="Start Automation", command=self.automate_process_rough) # button for the automation process
+        self.automate_button = tk.Button(self.button_frame, text="Start Automation", command=self.test_run) # button for the automation process
         self.automate_button.pack(side=tk.LEFT, padx=5, pady=5)
 
         self.clear_data_button = tk.Button(self.button_frame, text="Clear All Data", command=self.clear_all_data)
@@ -217,6 +217,28 @@ class ImageProcessorApp:
     
     def dummy_command(self): # Placeholder for future functionality, debug
         print("Button clicked")
+    
+    def test_run(self): #this is a function to go through some of the DAC values. I use this so i can look at the fiber
+        self.amp_on()
+        sleep(5)
+        self.set_DAC(2047,2047)
+        sleep(5)
+        self.set_DAC(3537,3537)
+        sleep(5)
+        self.set_DAC(559,3537)
+        sleep(5)    
+        self.set_DAC(2047,2047)
+        sleep(5)
+        self.set_DAC(3537,559)
+        sleep(5)
+        self.set_DAC(2047,2047)
+        sleep(5)
+        self.set_DAC(559,559)
+        sleep(5)
+        self.set_DAC(2047,2047)
+        self.amp_off()
+        print("DONE")
+
 
     def capture_image_from_camera(self, max_retries=3, retry_delay=2): # this function is what tells the camera to taka a photo and return the caputred image 
         """Capture an image from the camera with retry mechanism if the first attempt fails."""
@@ -231,11 +253,11 @@ class ImageProcessorApp:
                 print(f'Attempt {attempt + 1} of {max_retries} to capture image.')
 
                 # Set exposure time (in microseconds)
-                exposure_time = 12000
+                exposure_time = 1519
                 self.camera.set_control_value(asi.ASI_EXPOSURE, exposure_time)
 
                 # Define the gain value (adjust as needed, example value)
-                gain_value = 1  # This could be a value between 0 and 600 for this camera
+                gain_value = 18  # This could be a value between 0 and 600 for this camera
                 self.camera.set_control_value(asi.ASI_GAIN, gain_value)
 
                 print('Capturing Image...')
