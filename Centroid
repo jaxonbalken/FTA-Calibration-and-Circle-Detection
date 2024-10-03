@@ -103,7 +103,7 @@ class ImageProcessorApp:
         self.process_button = tk.Button(self.button_frame, text="Process Image", command=self.process_image) #button for processing image 
         self.process_button.pack(side=tk.LEFT, padx=5, pady=5)
 
-        self.automate_button = tk.Button(self.button_frame, text="Start Automation", command=self.test_run) # button for the automation process
+        self.automate_button = tk.Button(self.button_frame, text="Start Automation", command=self.automate_process) # button for the automation process
         self.automate_button.pack(side=tk.LEFT, padx=5, pady=5)
 
         self.clear_data_button = tk.Button(self.button_frame, text="Clear All Data", command=self.clear_all_data)
@@ -434,10 +434,17 @@ class ImageProcessorApp:
         # Draw the updated plot
         self.canvas.draw()
 
-    def automate_process_rough(self): # manual brute force way of moving the fiber tip
+    def automate_process(self): # manual brute force way of moving the fiber tip
         #min is 559 for x and y dac values
         #max is 3537 for x and y dac values 
         print('Automation Started...')
+
+        print('Taking photo')
+        self.capture_image_from_camera()
+        print('Processing Image')
+        sleep(2)
+        self.process_image()
+        print('Image processed, waiting for next round')
 
         print('Turning Amp On')
         self.amp_on()
@@ -538,7 +545,6 @@ class ImageProcessorApp:
         sleep(2)
         self.process_image()
         print('Automation Done')
-
 
     def save_data(self):
         # Initialize Tkinter root (necessary for the file dialog)
