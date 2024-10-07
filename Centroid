@@ -106,6 +106,9 @@ class ImageProcessorApp:
         self.automate_button = tk.Button(self.button_frame, text="Start Automation", command=self.automate_process) # button for the automation process
         self.automate_button.pack(side=tk.LEFT, padx=5, pady=5)
 
+        self.timelapse_button = tk.Button(self.button_frame, text="Time Lapse", command=self.time_lapse)
+        self.timelapse_button.pack(side=tk.LEFT, padx=5, pady=5)
+
         self.clear_data_button = tk.Button(self.button_frame, text="Clear All Data", command=self.clear_all_data)
         self.clear_data_button.pack(side=tk.RIGHT, padx=5, pady=5)
 
@@ -218,6 +221,17 @@ class ImageProcessorApp:
     def dummy_command(self): # Placeholder for future functionality, debug
         print("Button clicked")
     
+    def time_lapse(self, rounds=10):
+        for i in range(rounds):
+            print(f"Starting Time Lapse, Round {i+1} of {rounds} Rounds")
+            self.capture_image_from_camera()
+            print('Processing Image')
+            sleep(2)
+            self.process_image()
+            print('Image processed, waiting for next round')
+            sleep(30)
+        print("DONE")
+    
     def test_run(self): #this is a function to go through some of the DAC values. I use this so i can look at the fiber
         self.amp_on()
         sleep(5)
@@ -239,8 +253,7 @@ class ImageProcessorApp:
         self.amp_off()
         print("DONE")
 
-
-    def capture_image_from_camera(self, max_retries=3, retry_delay=2): # this function is what tells the camera to taka a photo and return the caputred image 
+    def capture_image_from_camera(self, max_retries=3, retry_delay=1): # this function is what tells the camera to taka a photo and return the caputred image 
         """Capture an image from the camera with retry mechanism if the first attempt fails."""
         if not self.camera_initialized:
             messagebox.showerror("Error", "Camera is not connected.")
@@ -253,7 +266,7 @@ class ImageProcessorApp:
                 print(f'Attempt {attempt + 1} of {max_retries} to capture image.')
 
                 # Set exposure time (in microseconds)
-                exposure_time = 1519
+                exposure_time = 336000
                 self.camera.set_control_value(asi.ASI_EXPOSURE, exposure_time)
 
                 # Define the gain value (adjust as needed, example value)
@@ -400,7 +413,7 @@ class ImageProcessorApp:
         print("All data cleared.")
 
     def display_image(self, image, frame):
-        scale = 0.25 #allows you to change the size of the image in the tkinter window 
+        scale = 0.5 #allows you to change the size of the image in the tkinter window 
         h, w = image.shape[:2]
         new_w = int(w * scale)
         new_h = int(h * scale)# Resizes image based on mulitplier 
@@ -422,12 +435,12 @@ class ImageProcessorApp:
     def update_plot(self): #actively updates the plot as the new images are processed
         current_date = date.today()
         self.ax.set_title(f'Fiber Tip Centers, {current_date}')
-        self.ax.set_xlabel("X")
-        self.ax.set_ylabel("Y")
-        plt.gca().invert_xaxis()
-        plt.gca().invert_yaxis()
-        # Extract X and Y coordinates of circle centers
+        self.ax.set_xlabel("X Pixels")
+        self.ax.set_ylabel("Y Pixels")
+
         if self.circle_centers:
+            
+        # Extract X and Y coordinates of circle centers
             xs, ys = zip(*self.circle_centers)
             self.ax.scatter(xs, ys, color='red')
         #self.ax.invert_yaxis() #able to flip y axis if the picture and plot dont match 
