@@ -140,21 +140,21 @@ class ImageProcessorApp:
         self.canvas.get_tk_widget().pack(fill=tk.BOTH, expand=True)
 
     def connect_camera(self):
-            # Initialize camera
-            env_filename = os.getenv('ZWO_ASI_LIB')
-            asi.init('C:\\Users\\ASE\\Desktop\\Ari Lab-2023\\Pics\\ASIStudio\\ASICamera2.dll')
-            self.num_cameras = asi.get_num_cameras() #ask how many cameras are connected
-            print('Camera connected')
-            if self.num_cameras == 0: #if no cameras are connected, return this message 
-                messagebox.showerror("Error", "No cameras found")
-                self.root.destroy() # Closes the Tkinter window and exits the application
-                return
-            
-            self.camera = asi.Camera(0) #initializes the camera and saves it to this variable, first camera selected 
-            self.camera.set_control_value(asi.ASI_HIGH_SPEED_MODE, 1) #sets the contol value to enable high speed mode, 1 enables the mode
-            self.camera.set_roi() #sets range of intrest, roi is set for the entire image 
-            self.camera_initialized = True  # Set camera initialization flag
-            print('Camera Ready')
+        # Initialize camera
+        env_filename = os.getenv('ZWO_ASI_LIB')
+        asi.init('C:\\Users\\ASE\\Desktop\\Ari Lab-2023\\Pics\\ASIStudio\\ASICamera2.dll')
+        self.num_cameras = asi.get_num_cameras() #ask how many cameras are connected
+        print('Camera connected')
+        if self.num_cameras == 0: #if no cameras are connected, return this message 
+            messagebox.showerror("Error", "No cameras found")
+            self.root.destroy() # Closes the Tkinter window and exits the application
+            return
+        
+        self.camera = asi.Camera(0) #initializes the camera and saves it to this variable, first camera selected 
+        self.camera.set_control_value(asi.ASI_HIGH_SPEED_MODE, 1) #sets the contol value to enable high speed mode, 1 enables the mode
+        self.camera.set_roi() #sets range of intrest, roi is set for the entire image 
+        self.camera_initialized = True  # Set camera initialization flag
+        print('Camera Ready')
 
     def connect_actuator(portname=ports[0]): #connects the actuator, sets a default value for the portname. selects the first available port
         selected_port = portname #setting the serial port that will be used for connection
