@@ -90,6 +90,18 @@ class ImageProcessorApp:
         self.update_coords_button = tk.Button(self.coord_frame, text="Update Coordinates", command=self.update_coordinates)
         self.update_coords_button.pack(pady=5)
 
+        self.exposure_label = tk.Label(self.coord_frame, text="Exposure Time (μs):")
+        self.exposure_label.pack()
+        self.exposure_entry = tk.Entry(self.coord_frame)
+        self.exposure_entry.pack()
+        self.exposure_entry.insert(50000,'50000')
+
+        self.gain_label = tk.Label(self.coord_frame, text="Gain Value:")
+        self.gain_label.pack()
+        self.gain_entry = tk.Entry(self.coord_frame)
+        self.gain_entry.pack()
+        self.gain_entry.insert(75,'75')
+        
         # Buttons for load and process
         self.button_frame = tk.Frame(root)
         self.button_frame.pack(fill=tk.X, side=tk.BOTTOM)
@@ -253,12 +265,21 @@ class ImageProcessorApp:
         self.amp_off()
         print("DONE")
 
-    def capture_image_from_camera(self, max_retries=3, retry_delay=1): # this function is what tells the camera to taka a photo and return the caputred image 
+    def capture_image_from_camera(self, max_retries=3, retry_delay=1):
         """Capture an image from the camera with retry mechanism if the first attempt fails."""
         if not self.camera_initialized:
             messagebox.showerror("Error", "Camera is not connected.")
             self.connect_camera()
             return
+
+        # Attempt to read gain and exposure values
+        try:
+            gain_value = int(self.gain_entry.get())
+            exposure_time = int(self.exposure_entry.get())
+        except ValueError:
+            messagebox.showerror("Error", "Please enter valid integers for gain and exposure.")
+            return
+
         attempt = 0
         while attempt < max_retries:
             try:
@@ -266,11 +287,9 @@ class ImageProcessorApp:
                 print(f'Attempt {attempt + 1} of {max_retries} to capture image.')
 
                 # Set exposure time (in microseconds)
-                exposure_time = 33000
                 self.camera.set_control_value(asi.ASI_EXPOSURE, exposure_time)
 
-                # Define the gain value (adjust as needed, example value)
-                gain_value = 42  # This could be a value between 0 and 600 for this camera
+                # Set gain value
                 self.camera.set_control_value(asi.ASI_GAIN, gain_value)
 
                 print('Capturing Image...')
@@ -324,13 +343,13 @@ class ImageProcessorApp:
             # Crop the output back to the original image size
             # Add to data storage with element number
             element = int(self.selected_element.get())
-            print(f'Element #{element}')
+            #print(f'Element #{element}')
             print(f"Recorded circle centers: {self.circle_centers}")
 
             fiber_size = 125
             pixel_size = fiber_size / (circle_radius * 2)
-            print("Detected circle radii:", circle_radius, 'Pixels')
-            print("Detected pixel size", pixel_size, 'microns/pixel')
+            #print("Detected circle radii:", circle_radius, 'Pixels')
+            #print("Detected pixel size", pixel_size, 'microns/pixel')
 
             self.circle_radii.append(circle_radius)
             self.pixle_size.append(pixel_size)
@@ -413,7 +432,7 @@ class ImageProcessorApp:
         print("All data cleared.")
 
     def display_image(self, image, frame):
-        scale = 0.5 #allows you to change the size of the image in the tkinter window 
+        scale = 0.3 #allows you to change the size of the image in the tkinter window 
         h, w = image.shape[:2]
         new_w = int(w * scale)
         new_h = int(h * scale)# Resizes image based on mulitplier 
