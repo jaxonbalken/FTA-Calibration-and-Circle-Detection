@@ -230,7 +230,7 @@ class ImageProcessorApp:
                 print(f'Attempt {attempt + 1} of {max_retries} to capture image.')
 
                 # Set exposure time (in microseconds)
-                exposure_time = 53000
+                exposure_time = 36000
                 self.camera.set_control_value(asi.ASI_EXPOSURE, exposure_time)
 
                 # Define the gain value (adjust as needed, example value)

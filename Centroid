@@ -115,7 +115,7 @@ class ImageProcessorApp:
         self.process_button = tk.Button(self.button_frame, text="Process Image", command=self.process_image) #button for processing image 
         self.process_button.pack(side=tk.LEFT, padx=5, pady=5)
 
-        self.automate_button = tk.Button(self.button_frame, text="Start Automation", command=self.automate_process) # button for the automation process
+        self.automate_button = tk.Button(self.button_frame, text="Start Automation", command=self.test_run) # button for the automation process
         self.automate_button.pack(side=tk.LEFT, padx=5, pady=5)
 
         self.timelapse_button = tk.Button(self.button_frame, text="Time Lapse", command=self.time_lapse)
@@ -244,26 +244,10 @@ class ImageProcessorApp:
             sleep(30)
         print("DONE")
     
-    def test_run(self): #this is a function to go through some of the DAC values. I use this so i can look at the fiber
-        self.amp_on()
-        sleep(5)
-        self.set_DAC(2047,2047)
-        sleep(5)
-        self.set_DAC(3537,3537)
-        sleep(5)
-        self.set_DAC(559,3537)
-        sleep(5)    
-        self.set_DAC(2047,2047)
-        sleep(5)
-        self.set_DAC(3537,559)
-        sleep(5)
-        self.set_DAC(2047,2047)
-        sleep(5)
-        self.set_DAC(559,559)
-        sleep(5)
-        self.set_DAC(2047,2047)
-        self.amp_off()
-        print("DONE")
+    def test_run(self): 
+        sleep(10) #this is a function to go through some of the DAC values. I use this so i can look at the fiber
+        self.capture_image_from_camera()
+        
 
     def capture_image_from_camera(self, max_retries=3, retry_delay=1):
         """Capture an image from the camera with retry mechanism if the first attempt fails."""
@@ -347,7 +331,8 @@ class ImageProcessorApp:
             print(f"Recorded circle centers: {self.circle_centers}")
 
             fiber_size = 125
-            pixel_size = fiber_size / (circle_radius * 2)
+            #pixel_size = fiber_size / (circle_radius * 2)
+            pixel_size = 210
             #print("Detected circle radii:", circle_radius, 'Pixels')
             #print("Detected pixel size", pixel_size, 'microns/pixel')
 
