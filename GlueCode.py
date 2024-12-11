@@ -50,57 +50,17 @@ class ImageProcessorApp:
         self.coord_frame = tk.Frame(self.image_frame)
         self.coord_frame.pack(side=tk.RIGHT, padx=10, pady=10)
 
-        # Element Number Controls
-        # Define element number options
-        self.element_options = [str(i) for i in range(1, 9)]  #options from 1 to 8
-        self.selected_element = tk.StringVar(root)
-        self.selected_element.set(self.element_options[0])  # Default value
-
-        # Element Number Dropdown
-        self.element_label = tk.Label(self.coord_frame, text="Element Number")
-        self.element_label.pack()
-
-        self.element_dropdown = tk.OptionMenu(self.coord_frame, self.selected_element, *self.element_options)
-        self.element_dropdown.pack()
-
-        #PREAMPS enable/disable button
-        self.amps_var = tk.BooleanVar(value=False) #create boolean value to make sure the preamps always starts disabled
-
-        self.preamps = tk.Checkbutton(self.coord_frame, text = 'Enable XY Preamps', variable=self.amps_var, command=self.toggle_amp)
-        self.preamps.pack(padx=10,pady=10)
-
-        #Buttons for x anf y coordinates
-        # X Coordinate Controls
-        self.xcoord_label = tk.Label(self.coord_frame, text="X Coordinate")
-        self.xcoord_label.pack()
-
-        self.xcoord_entry = tk.Entry(self.coord_frame) #create entry places for the xy coordinates
-        self.xcoord_entry.pack()
-        self.xcoord_entry.insert(0, "0")  # Set default value
-
-        # Y Coordinate Controls
-        self.ycoord_label = tk.Label(self.coord_frame, text="Y Coordinate")
-        self.ycoord_label.pack()
-
-        self.ycoord_entry = tk.Entry(self.coord_frame) #create entry places for the xy coordinates
-        self.ycoord_entry.pack()
-        self.ycoord_entry.insert(0, "0")  # Set default value
-
-        # Coordinates Button
-        self.update_coords_button = tk.Button(self.coord_frame, text="Update Coordinates", command=self.update_coordinates)
-        self.update_coords_button.pack(pady=5)
-
         self.exposure_label = tk.Label(self.coord_frame, text="Exposure Time (μs):")
         self.exposure_label.pack()
         self.exposure_entry = tk.Entry(self.coord_frame)
         self.exposure_entry.pack()
-        self.exposure_entry.insert(50000,'50000')
+        self.exposure_entry.insert(7200,'7200')
 
         self.gain_label = tk.Label(self.coord_frame, text="Gain Value:")
         self.gain_label.pack()
         self.gain_entry = tk.Entry(self.coord_frame)
         self.gain_entry.pack()
-        self.gain_entry.insert(75,'75')
+        self.gain_entry.insert(160,'160')
         
         # Buttons for load and process
         self.button_frame = tk.Frame(root)
@@ -114,9 +74,6 @@ class ImageProcessorApp:
 
         self.process_button = tk.Button(self.button_frame, text="Process Image", command=self.process_image) #button for processing image 
         self.process_button.pack(side=tk.LEFT, padx=5, pady=5)
-
-        self.automate_button = tk.Button(self.button_frame, text="Start Automation", command=self.test_run) # button for the automation process
-        self.automate_button.pack(side=tk.LEFT, padx=5, pady=5)
 
         self.timelapse_button = tk.Button(self.button_frame, text="Time Lapse", command=self.time_lapse)
         self.timelapse_button.pack(side=tk.LEFT, padx=5, pady=5)
@@ -168,51 +125,12 @@ class ImageProcessorApp:
         self.camera_initialized = True  # Set camera initialization flag
         print('Camera Ready')
 
-    def connect_actuator(portname=ports[0]): #connects the actuator, sets a default value for the portname. selects the first available port
-        selected_port = portname #setting the serial port that will be used for connection
-        ser = serial.Serial( selected_port.device, 115200, timeout=1) #create connection, in this case portname was COM7
-        #self.ser.isOpen()
-        ser.flushInput() #clears any data that has been received but not yet read
-        ser.flushOutput() #clears any data that has been written but not yet transmitted
-        return ser #object can now be used to read and write to the serial port 
-
-    ser=connect_actuator()
-       
-    def amp_on(self): #turns on the preamp
-        test_str = 'amp_enable\r\n' #test string that will be sent to the piboard, formatted with newline character
-        print("OUT: " + test_str) # prints the command is being sent, debug
-        self.ser.write( test_str.encode('ascii') ) # convert the sting to bytes since serial connection requires this format
-        line =  self.ser.readline().decode('utf-8') # reads a line of text from the serial port and decodes it. now we wait 
-        while not line: #wait for pyboard to respond
-            line =  self.ser.readline().decode('utf-8') #once a non-empty resonce is given, print
-        print( "In : " + line )
-
-    def amp_off(self): #turns off the preamp
-        test_str = 'amp_disable\r\n' #test string that will be sent to the piboard, formatted with newline character
-        print("OUT: " + test_str) # prints the command is being sent, debug
-        self.ser.write( test_str.encode('ascii') ) # convert the sting to bytes since serial connection requires this format
-        line =  self.ser.readline().decode('utf-8') # reads a line of text from the serial port and decodes it. now we wait
-        while not line: #wait for pyboard to respond
-            line =  self.ser.readline().decode('utf-8') #once a non-empty resonce is given, print
-        print( "In : " + line )   
-
-    def set_DAC(self,x,y): #basically same thing as above, but different strings are inputed to the fta controller to oget back differnt outputs. there are both x and y inputs though
-        test_str = f'DAC_set,{x},{y}\r\n' #DAC is responcoble for the xy inputs of the FTA. can be values 0-4095
-        print("OUT: " + test_str)
-        self.ser.write( test_str.encode('ascii') ) 
-        line =  self.ser.readline().decode('utf-8') 
-        while not line: #wait for pyboard to respond
-            line =  self.ser.readline().decode('utf-8') 
-        print( "In : " + line )
-        
-        element = int(self.selected_element.get())  # Get the element number from dropdown
-        self.dac_values.append((x, y)) # append the element and dac inputs 
 
     def update_coordinates(self): #reads the x and y values from the input and passes it throught the set_DAC function
         try:
             x = int(self.xcoord_entry.get()) #gets user input, which is from the text from the xy coordinate entry button, converts to integer so nothing gets messed up 
             y = int(self.ycoord_entry.get())
-            element = int(self.selected_element.get())  # Get the element number from dropdown
+              # Get the element number from dropdown
 
             if self.coord_min <= x <= self.coord_max and self.coord_min <= y <= self.coord_max:
                 print(f"Setting DAC to X: {x}, Y: {y}") # make sure the values are in the accepted range
@@ -319,26 +237,43 @@ class ImageProcessorApp:
             #
             #  display the image
             #cv2.imshow("Image", output)
-            cv2.waitKey(0)
+            circle_center_x = 855
+            circle_center_y = 540
+            radius_circle = 160
+
+            cv2.circle(output, (circle_center_x,circle_center_y), radius_circle, (255,0,0), 2)
+
+            distance_x = cX-circle_center_x
+            distance_y = cY-circle_center_y
+            distance = np.sqrt((distance_x) ** 2 + (distance_y)**2)
+            print(f'X distance between ferrule and lense center: {distance_x*-1} pixels')
+            print(f'Y distance between ferrule and lense center: {distance_y*-1} pixels')
+            print(f'distance between ferrule and lense center: {distance} pixels')
+
             # print(cX)
             # print(cY)
             self.circle_centers.append((cX, cY))
             circle_radius = 37
             # Crop the output back to the original image size
             # Add to data storage with element number
-            element = int(self.selected_element.get())
+            
+
+            cv2.waitKey(0)
             #print(f'Element #{element}')
             print(f"Recorded circle centers: {self.circle_centers}")
 
             fiber_size = 125
             #pixel_size = fiber_size / (circle_radius * 2)
-            pixel_size = 210
+            pixel_size = 0.6
             #print("Detected circle radii:", circle_radius, 'Pixels')
-            #print("Detected pixel size", pixel_size, 'microns/pixel')
+            #print("Detected pixel size", pixel_size, 'mm/pixel')
+
+            print(f'X distance between ferrule and lense center: {distance_x*pixel_size} mm')
+            print(f'Y distance between ferrule and lense center: {distance_y*pixel_size} mm')
+            print(f'distance between ferrule and lense center: {distance*pixel_size} mm')
 
             self.circle_radii.append(circle_radius)
             self.pixle_size.append(pixel_size)
-
 
             color_mapped_image = cv2.applyColorMap(output, cv2.COLORMAP_PLASMA) # changes the output photo to plasma color map(looks cool)
             self.processed_image = color_mapped_image #assign value to new image so it can be displayed. idk why i did this i realize now that this is not needed 
@@ -450,118 +385,6 @@ class ImageProcessorApp:
         #self.ax.invert_yaxis() #able to flip y axis if the picture and plot dont match 
         # Draw the updated plot
         self.canvas.draw()
-
-    def automate_process(self): # manual brute force way of moving the fiber tip
-        #min is 559 for x and y dac values
-        #max is 3537 for x and y dac values 
-        print('Automation Started...')
-
-        print('Taking photo')
-        self.capture_image_from_camera()
-        print('Processing Image')
-        sleep(2)
-        self.process_image()
-        print('Image processed, waiting for next round')
-
-        print('Turning Amp On')
-        self.amp_on()
-        sleep(3)
-        print('Taking photo')
-        self.capture_image_from_camera()
-        print('Processing Image')
-        sleep(2)
-        self.process_image()
-        print('Image processed, waiting for next round')
-        sleep(10)
-
-        self.set_DAC(2047, 2047)
-        print('Waiting for Fiber Tip to Move... ')
-        sleep(10)
-        print('Taking photo')
-        self.capture_image_from_camera()
-        print('Processing Image')
-        sleep(2)
-        self.process_image()
-        print('Image processed, waiting for next round')
-        sleep(10)
-
-        self.set_DAC(559, 559)
-        print('Waiting for Fiber Tip to Move... ')
-        sleep(20)
-        print('Taking photo')
-        self.capture_image_from_camera()
-        print('Processing Image')
-        sleep(2)
-        self.process_image()
-        print('Image processed, waiting for next round')
-        sleep(10)
-    
-        self.set_DAC(3537, 3537)
-        print('Waiting for Fiber Tip to Move... ')
-        sleep(20)
-        print('Taking photo')
-        self.capture_image_from_camera()
-        print('Processing Image')
-        sleep(2)
-        self.process_image()
-        sleep(10)
-
-        self.set_DAC(3537,559)
-        print('Waiting for Fiber Tip to Move... ')
-        sleep(20)
-        print('Taking photo')
-        self.capture_image_from_camera()
-        print('Processing Image')
-        sleep(2)
-        self.process_image()
-        print('Image processed, waiting for next round')
-        sleep(10)
-        
-        self.set_DAC(559, 3537)
-        print('Waiting for Fiber Tip to Move... ')
-        sleep(20)
-        print('Taking photo')
-        self.capture_image_from_camera()
-        print('Processing Image')
-        sleep(2)
-        self.process_image()
-        sleep(10)
-
-        self.set_DAC(2047,2047)
-        print('Waiting for Fiber Tip to Move... ')
-        sleep(12)
-        print('Taking photo')
-        self.capture_image_from_camera()
-        print('Processing Image')
-        sleep(2)
-        self.process_image()
-        sleep(8)
-        
-        for i in range(600,3500,200):
-            self.set_DAC(i,2047)
-            sleep(6)
-            print('Taking photo')
-            self.capture_image_from_camera()
-            print('Processing Image')
-            self.process_image()
-            sleep(8)
-
-        for i in range(600,3500,200):
-            self.set_DAC(2047,i)
-            sleep(6)
-            print('Taking photo')
-            self.capture_image_from_camera()
-            print('Processing Image')
-            self.process_image()
-            sleep(8)
-
-        self.set_DAC(2047,2047)
-        self.amp_off()
-        self.capture_image_from_camera()
-        print('Processing Image')
-        sleep(2)
-        self.process_image()
-        print('Automation Done')
 
     def save_data(self):
         # Initialize Tkinter root (necessary for the file dialog)
