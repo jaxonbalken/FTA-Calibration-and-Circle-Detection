@@ -153,13 +153,14 @@ class ImageProcessorApp:
     
     def time_lapse(self, rounds=10):
         for i in range(rounds):
+            sleep(10)
             print(f"Starting Time Lapse, Round {i+1} of {rounds} Rounds")
             self.capture_image_from_camera()
             print('Processing Image')
             sleep(2)
             self.process_image()
             print('Image processed, waiting for next round')
-            sleep(30)
+            sleep(5)
         print("DONE")
     
     def test_run(self): 
@@ -246,7 +247,7 @@ class ImageProcessorApp:
             distance_x = cX-circle_center_x
             distance_y = cY-circle_center_y
             distance = np.sqrt((distance_x) ** 2 + (distance_y)**2)
-            print(f'X distance between ferrule and lense center: {distance_x*-1} pixels')
+            print(f'X distance between ferrule and lense center: {distance_x*1} pixels')
             print(f'Y distance between ferrule and lense center: {distance_y*-1} pixels')
             print(f'distance between ferrule and lense center: {distance} pixels')
 
@@ -269,7 +270,7 @@ class ImageProcessorApp:
             #print("Detected pixel size", pixel_size, 'mm/pixel')
 
             print(f'X distance between ferrule and lense center: {distance_x*pixel_size} mm')
-            print(f'Y distance between ferrule and lense center: {distance_y*pixel_size} mm')
+            print(f'Y distance between ferrule and lense center: {distance_y*pixel_size*-1} mm')
             print(f'distance between ferrule and lense center: {distance*pixel_size} mm')
 
             self.circle_radii.append(circle_radius)
