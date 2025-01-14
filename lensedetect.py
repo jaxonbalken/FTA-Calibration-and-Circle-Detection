@@ -1,7 +1,8 @@
+
 import tkinter as tk
 from tkinter import filedialog, messagebox
 from PIL import Image, ImageTk
-import cv2
+import cv2 as cv
 import numpy as np
 import os
 import zwoasi as asi
@@ -54,32 +55,13 @@ class ImageProcessorApp:
         self.exposure_label.pack()
         self.exposure_entry = tk.Entry(self.coord_frame)
         self.exposure_entry.pack()
-        self.exposure_entry.insert(74000,'74000')
+        self.exposure_entry.insert(7200,'7200')
 
         self.gain_label = tk.Label(self.coord_frame, text="Gain Value:")
         self.gain_label.pack()
         self.gain_entry = tk.Entry(self.coord_frame)
         self.gain_entry.pack()
-        self.gain_entry.insert(0,'0')
-
-        self.Xcoord_label = tk.Label(self.coord_frame, text= 'X Coord Circle')
-        self.Xcoord_label.pack()
-        self.Xcoord_entry = tk.Entry(self.coord_frame)
-        self.Xcoord_entry.pack()
-        self.Xcoord_entry.insert(840, '840')
-
-        self.Ycoord_label = tk.Label(self.coord_frame, text= 'Y Coord Circle')
-        self.Ycoord_label.pack()
-        self.Ycoord_entry = tk.Entry(self.coord_frame)
-        self.Ycoord_entry.pack()
-        self.Ycoord_entry.insert(566, '566')
-
-        self.rad_label = tk.Label(self.coord_frame, text= 'Radius')
-        self.rad_label.pack()
-        self.rad_entry = tk.Entry(self.coord_frame)
-        self.rad_entry.pack()
-        self.rad_entry.insert(174,'174')
-
+        self.gain_entry.insert(160,'160')
         
         # Buttons for load and process
         self.button_frame = tk.Frame(root)
@@ -120,24 +102,12 @@ class ImageProcessorApp:
         #self.circle_radius = []
 
 # Initialize plot, label axis 
-        self.info_frame = tk.Frame(root)
-        self.info_frame.pack()
-
-        self.awayx_label = tk.Label(self.info_frame, text= 'X mm Away', font=("Arial", 18))
-        self.awayx_label.pack()
-
-        self.awayy_label = tk.Label(self.info_frame, text= 'Y mm Away', font=("Helvetica", 18))
-        self.awayy_label.pack()
-
-        self.totaldistance_label = tk.Label(self.info_frame, text= 'Total Distance mm', font=("Helvetica", 18))
-        self.totaldistance_label.pack()
-
-        # self.fig, self.ax = plt.subplots()
-        # self.ax.set_title("Fiber Tip Centers")
-        # self.ax.set_xlabel("X")
-        # self.ax.set_ylabel("Y")
-        # self.canvas = FigureCanvasTkAgg(self.fig, master=self.root) #creates widget that allows for matplotlib
-        # self.canvas.get_tk_widget().pack(fill=tk.BOTH, expand=True)
+        self.fig, self.ax = plt.subplots()
+        self.ax.set_title("Fiber Tip Centers")
+        self.ax.set_xlabel("X")
+        self.ax.set_ylabel("Y")
+        self.canvas = FigureCanvasTkAgg(self.fig, master=self.root) #creates widget that allows for matplotlib
+        self.canvas.get_tk_widget().pack(fill=tk.BOTH, expand=True)
 
     def connect_camera(self):
         # Initialize camera
@@ -182,17 +152,15 @@ class ImageProcessorApp:
     def dummy_command(self): # Placeholder for future functionality, debug
         print("Button clicked")
         output = self.original_image.copy()
-        circle_center_x = int(self.Xcoord_entry.get())
-        circle_center_y = int(self.Ycoord_entry.get())
-        radius_circle = int(self.rad_entry.get())
+        circle_center_x = 846
+        circle_center_y = 538
+        radius_circle = 190
 
-        cv2.circle(output, (circle_center_x,circle_center_y), radius_circle, (255,0,0), 2)
-        color_mapped_image = cv2.applyColorMap(output, cv2.COLORMAP_PLASMA) # changes the output photo to plasma color map(looks cool)
+        cv.circle(output, (circle_center_x,circle_center_y), radius_circle, (255,0,0), 2)
+        color_mapped_image = cv.applyColorMap(output, cv.COLORMAP_PLASMA) # changes the output photo to plasma color map(looks cool)
         self.processed_image = color_mapped_image #assign value to new image so it can be displayed. idk why i did this i realize now that this is not needed 
         self.display_image(self.processed_image, self.frame_processed)
-        self.update_plot(mmdistance_x, mmdistance_y, mmdistance)  # Update the existing plot with new data
-        print(f'x center : {circle_center_x}')
-        print(f'y center : {circle_center_y}')
+        self.update_plot()  # Update the existing plot with new data
 
     def time_lapse(self, rounds=10):
         for i in range(rounds):
@@ -262,77 +230,59 @@ class ImageProcessorApp:
             if self.original_image is None:
                 messagebox.showerror("Error", "No image captured")
                 return
-            
-            global mmdistance_x, mmdistance_y, mmdistance
         
             output = self.original_image.copy()
 
             # convert the grayscale image to binary image
-            ret,thresh = cv2.threshold(self.original_image,127,255,0)
+            gray = output
             
-            # calculate moments of binary image
-            M = cv2.moments(thresh)
+    
+            gray = cv.medianBlur(gray, 5)
+    
+    
+            rows = gray.shape[0]
+            circles = cv.HoughCircles(gray, cv.HOUGH_GRADIENT, 1, rows / 8,
+                                    param1=100, param2=30,
+                                    minRadius=1, maxRadius=30)
+            
+            
+            if circles is not None:
+                circles = np.uint16(np.around(circles))
+                for i in circles[0, :]:
+                    center = (i[0], i[1])
+                    # circle center
+                    cv.circle(output, center, 1, (0, 100, 100), 3)
+                    # circle outline
+                    radius = i[2]
+                    cv.circle(output, center, radius, (255, 0, 255), 3)
+            else:
+        # If no circles were detected, display a message
+                messagebox.showinfo("No Circles Detected", "No circles were detected in the image.")
+                print("No circles were detected.")
+                    
 
-            # calculate x,y coordinate of center
-            cX = int(M["m10"] / M["m00"])
-            cY = int(M["m01"] / M["m00"])
-            
-            # put text and highlight the center
-            cv2.circle(output, (cX, cY), 5, (0, 255, 255), -1)
-            cv2.putText(output, "centroid", (cX - 25, cY - 25),cv2.FONT_HERSHEY_SIMPLEX, 0.5, (0, 255, 255), 2)
-            #
-            #  display the image
-            #cv2.imshow("Image", output)
-            circle_center_x = int(self.Xcoord_entry.get())
-            circle_center_y = int(self.Ycoord_entry.get())
-            radius_circle = int(self.rad_entry.get()) #pixels
-            
-            cv2.circle(output, (circle_center_x,circle_center_y), radius_circle, (255,0,0), 2)
-            cv2.circle(output, (circle_center_x, circle_center_y), 5, (0, 255, 0), -1)
-            
-            distance_x = cX-circle_center_x
-            distance_y = cY-circle_center_y
-            distance = np.sqrt((distance_x) ** 2 + (distance_y)**2)
-            print(f'X distance between ferrule and lense center: {distance_x*1} pixels')
-            print(f'Y distance between ferrule and lense center: {distance_y*-1} pixels')
-            print(f'distance between ferrule and lense center: {distance} pixels')
-
-            # print(cX)
-            # print(cY)
-            self.circle_centers.append((cX, cY))
-            circle_radius = 37
-            # Crop the output back to the original image size
-            # Add to data storage with element number
-            
-            inside_diameter = 97.5 #mm
-            inside_radius = inside_diameter / 2
-
-
-            cv2.waitKey(0)
+            cv.waitKey(0)
             #print(f'Element #{element}')
             print(f"Recorded circle centers: {self.circle_centers}")
 
             fiber_size = 125
             #pixel_size = fiber_size / (circle_radius * 2)
-            pixel_size = inside_radius / radius_circle
+            pixel_size = 0.303
             #print("Detected circle radii:", circle_radius, 'Pixels')
             #print("Detected pixel size", pixel_size, 'mm/pixel')
 
-            mmdistance_x = distance_x*pixel_size
-            mmdistance_y = distance_y*pixel_size*-1
-            mmdistance = distance*pixel_size
-            print(f'X distance between ferrule and lense center: {mmdistance_x} mm')
-            print(f'Y distance between ferrule and lense center: {mmdistance_y} mm')
-            print(f'distance between ferrule and lense center: {mmdistance} mm')
-            print(f'Pixel Size: {pixel_size}')
+            # print(f'X distance between ferrule and lense center: {distance_x*pixel_size} mm')
+            # print(f'Y distance between ferrule and lense center: {distance_y*pixel_size*-1} mm')
+            # print(f'distance between ferrule and lense center: {distance*pixel_size} mm')
 
-            self.circle_radii.append(circle_radius)
-            self.pixle_size.append(pixel_size)
+            # self.circle_radii.append(circle_radius)
+            # self.pixle_size.append(pixel_size)
 
-            color_mapped_image = cv2.applyColorMap(output, cv2.COLORMAP_PLASMA) # changes the output photo to plasma color map(looks cool)
+            color_mapped_image = cv.applyColorMap(output, cv.COLOR_BGR2GRAY) # changes the output photo to plasma color map(looks cool)
             self.processed_image = color_mapped_image #assign value to new image so it can be displayed. idk why i did this i realize now that this is not needed 
             self.display_image(self.processed_image, self.frame_processed)
-            self.update_plot(mmdistance_x, mmdistance_y, mmdistance)  # Update the existing plot with new data
+            self.update_plot()  # Update the existing plot with new data
+
             
             if len(self.circle_centers) > 1:
                 previous_center = self.circle_centers[-2] # second most recent input in the list 
@@ -411,8 +361,8 @@ class ImageProcessorApp:
         new_w = int(w * scale)
         new_h = int(h * scale)# Resizes image based on mulitplier 
         
-        resized_image = cv2.resize(image, (new_w, new_h), interpolation=cv2.INTER_AREA)
-        resized_image = cv2.cvtColor(resized_image, cv2.COLOR_BGR2RGB)
+        resized_image = cv.resize(image, (new_w, new_h), interpolation=cv.INTER_AREA)
+        resized_image = cv.cvtColor(resized_image, cv.COLOR_BGR2RGB)
         image_pil = Image.fromarray(resized_image)
         image_tk = ImageTk.PhotoImage(image_pil)
         
@@ -425,13 +375,20 @@ class ImageProcessorApp:
         frame.canvas.create_image(0, 0, anchor=tk.NW, image=image_tk)
         frame.canvas.image = image_tk
 
-    def update_plot(self, mmdistance_x, mmdistance_y, mmdistance): #actively updates the plot as the new images are processed
+    def update_plot(self): #actively updates the plot as the new images are processed
         current_date = date.today()
+        self.ax.set_title(f'Fiber Tip Centers, {current_date}')
+        self.ax.set_xlabel("X Pixels")
+        self.ax.set_ylabel("Y Pixels")
 
-        self.awayx_label.config(text = f'X Distance(mm): {mmdistance_x:.2f}')
-        self.awayy_label.config(text = f'Y Distance(mm): {mmdistance_y:.2f}')
-        self.totaldistance_label.config(text = f'Total Distance(mm): {mmdistance:.2f}')
-
+        if self.circle_centers:
+            
+        # Extract X and Y coordinates of circle centers
+            xs, ys = zip(*self.circle_centers)
+            self.ax.scatter(xs, ys, color='red')
+        #self.ax.invert_yaxis() #able to flip y axis if the picture and plot dont match 
+        # Draw the updated plot
+        self.canvas.draw()
 
     def save_data(self):
         # Initialize Tkinter root (necessary for the file dialog)
