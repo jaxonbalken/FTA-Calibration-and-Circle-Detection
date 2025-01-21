@@ -54,7 +54,7 @@ class ImageProcessorApp:
         self.exposure_label.pack()
         self.exposure_entry = tk.Entry(self.coord_frame)
         self.exposure_entry.pack()
-        self.exposure_entry.insert(74000,'74000')
+        self.exposure_entry.insert(94000,'94000')
 
         self.gain_label = tk.Label(self.coord_frame, text="Gain Value:")
         self.gain_label.pack()
@@ -66,19 +66,19 @@ class ImageProcessorApp:
         self.Xcoord_label.pack()
         self.Xcoord_entry = tk.Entry(self.coord_frame)
         self.Xcoord_entry.pack()
-        self.Xcoord_entry.insert(840, '840')
+        self.Xcoord_entry.insert(846, '846')
 
         self.Ycoord_label = tk.Label(self.coord_frame, text= 'Y Coord Circle')
         self.Ycoord_label.pack()
         self.Ycoord_entry = tk.Entry(self.coord_frame)
         self.Ycoord_entry.pack()
-        self.Ycoord_entry.insert(566, '566')
+        self.Ycoord_entry.insert(560, '560')
 
         self.rad_label = tk.Label(self.coord_frame, text= 'Radius')
         self.rad_label.pack()
         self.rad_entry = tk.Entry(self.coord_frame)
         self.rad_entry.pack()
-        self.rad_entry.insert(174,'174')
+        self.rad_entry.insert(170,'170')
 
         
         # Buttons for load and process
