@@ -94,13 +94,13 @@ class ImageProcessorApp:
         self.exposure_label.pack()
         self.exposure_entry = tk.Entry(self.coord_frame)
         self.exposure_entry.pack()
-        self.exposure_entry.insert(7200,'7200')
+        self.exposure_entry.insert(27000,'27000')
 
         self.gain_label = tk.Label(self.coord_frame, text="Gain Value:")
         self.gain_label.pack()
         self.gain_entry = tk.Entry(self.coord_frame)
         self.gain_entry.pack()
-        self.gain_entry.insert(160,'160')
+        self.gain_entry.insert(0,'0')
         
         # Buttons for load and process
         self.button_frame = tk.Frame(root)
@@ -168,15 +168,15 @@ class ImageProcessorApp:
         self.camera_initialized = True  # Set camera initialization flag
         print('Camera Ready')
 
-    def connect_actuator(portname=ports[0]): #connects the actuator, sets a default value for the portname. selects the first available port
-        selected_port = portname #setting the serial port that will be used for connection
-        ser = serial.Serial( selected_port.device, 115200, timeout=1) #create connection, in this case portname was COM7
-        #self.ser.isOpen()
-        ser.flushInput() #clears any data that has been received but not yet read
-        ser.flushOutput() #clears any data that has been written but not yet transmitted
-        return ser #object can now be used to read and write to the serial port 
+    # def connect_actuator(portname=ports[0]): #connects the actuator, sets a default value for the portname. selects the first available port
+    #     selected_port = portname #setting the serial port that will be used for connection
+    #     ser = serial.Serial( selected_port.device, 115200, timeout=1) #create connection, in this case portname was COM7
+    #     #self.ser.isOpen()
+    #     ser.flushInput() #clears any data that has been received but not yet read
+    #     ser.flushOutput() #clears any data that has been written but not yet transmitted
+    #     return ser #object can now be used to read and write to the serial port 
 
-    ser=connect_actuator()
+    #ser=connect_actuator()
        
     def amp_on(self): #turns on the preamp
         test_str = 'amp_enable\r\n' #test string that will be sent to the piboard, formatted with newline character
@@ -315,7 +315,7 @@ class ImageProcessorApp:
             
             # put text and highlight the center
             cv2.circle(output, (cX, cY), 5, (0, 255, 255), -1)
-            cv2.putText(output, "centroid", (cX - 25, cY - 25),cv2.FONT_HERSHEY_SIMPLEX, 0.5, (0, 255, 255), 2)
+            cv2.putText(output, "Centroid", (cX - 25, cY - 25),cv2.FONT_HERSHEY_SIMPLEX, 0.5, (0, 255, 255), 2)
             #
             #  display the image
             #cv2.imshow("Image", output)
@@ -323,7 +323,7 @@ class ImageProcessorApp:
             # print(cX)
             # print(cY)
             self.circle_centers.append((cX, cY))
-            circle_radius = 37
+            circle_radius = 38 #pixels
             # Crop the output back to the original image size
             # Add to data storage with element number
             element = int(self.selected_element.get())
@@ -332,9 +332,8 @@ class ImageProcessorApp:
             #print(f'Element #{element}')
             print(f"Recorded circle centers: {self.circle_centers}")
 
-            fiber_size = 125
-            #pixel_size = fiber_size / (circle_radius * 2)
-            pixel_size = 210
+            fiber_size = 125 #microns
+            pixel_size = fiber_size / circle_radius
             #print("Detected circle radii:", circle_radius, 'Pixels')
             #print("Detected pixel size", pixel_size, 'microns/pixel')
 
@@ -364,6 +363,8 @@ class ImageProcessorApp:
                 print(f"Movement -- X: {movement_x} pixels, Y: {movement_y} pixels")
                 print(f'Microns Moved X: {self.microns_moved_in_x}')
                 print(f'Microns Moved Y: {self.microns_moved_in_y}')
+                print(f'MM Moved X: {int(self.microns_moved_in_x * .001)}')
+                print(f'MM Moved Y: {int(self.microns_moved_in_y * .001)}')
 
             if len(self.dac_values) > 1: # this is to use the saved values from the circle centers and the xy coords
                 

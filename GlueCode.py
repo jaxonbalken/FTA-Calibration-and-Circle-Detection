@@ -287,8 +287,8 @@ class ImageProcessorApp:
             circle_center_y = int(self.Ycoord_entry.get())
             radius_circle = int(self.rad_entry.get()) #pixels
             
-            cv2.circle(output, (circle_center_x,circle_center_y), radius_circle, (255,0,0), 2)
-            cv2.circle(output, (circle_center_x, circle_center_y), 5, (0, 255, 0), -1)
+            #cv2.circle(output, (circle_center_x,circle_center_y), radius_circle, (255,0,0), 2)
+            #cv2.circle(output, (circle_center_x, circle_center_y), 5, (0, 255, 0), -1)
             
             distance_x = cX-circle_center_x
             distance_y = cY-circle_center_y
