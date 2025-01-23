@@ -76,7 +76,7 @@ class ImageProcessorApp:
 
         self.xcoord_entry = tk.Entry(self.coord_frame) #create entry places for the xy coordinates
         self.xcoord_entry.pack()
-        self.xcoord_entry.insert(0, "0")  # Set default value
+        self.xcoord_entry.insert(2047, "2047")  # Set default value
 
         # Y Coordinate Controls
         self.ycoord_label = tk.Label(self.coord_frame, text="Y Coordinate")
@@ -84,7 +84,7 @@ class ImageProcessorApp:
 
         self.ycoord_entry = tk.Entry(self.coord_frame) #create entry places for the xy coordinates
         self.ycoord_entry.pack()
-        self.ycoord_entry.insert(0, "0")  # Set default value
+        self.ycoord_entry.insert(2047, "2047")  # Set default value
 
         # Coordinates Button
         self.update_coords_button = tk.Button(self.coord_frame, text="Update Coordinates", command=self.update_coordinates)
@@ -118,7 +118,7 @@ class ImageProcessorApp:
         self.automate_button = tk.Button(self.button_frame, text="Start Automation", command=self.test_run) # button for the automation process
         self.automate_button.pack(side=tk.LEFT, padx=5, pady=5)
 
-        self.timelapse_button = tk.Button(self.button_frame, text="Time Lapse", command=self.time_lapse)
+        self.timelapse_button = tk.Button(self.button_frame, text="General Info", command=self.dummy_command)
         self.timelapse_button.pack(side=tk.LEFT, padx=5, pady=5)
 
         self.clear_data_button = tk.Button(self.button_frame, text="Clear All Data", command=self.clear_all_data)
@@ -168,15 +168,15 @@ class ImageProcessorApp:
         self.camera_initialized = True  # Set camera initialization flag
         print('Camera Ready')
 
-    # def connect_actuator(portname=ports[0]): #connects the actuator, sets a default value for the portname. selects the first available port
-    #     selected_port = portname #setting the serial port that will be used for connection
-    #     ser = serial.Serial( selected_port.device, 115200, timeout=1) #create connection, in this case portname was COM7
-    #     #self.ser.isOpen()
-    #     ser.flushInput() #clears any data that has been received but not yet read
-    #     ser.flushOutput() #clears any data that has been written but not yet transmitted
-    #     return ser #object can now be used to read and write to the serial port 
+    def connect_actuator(portname=ports[0]): #connects the actuator, sets a default value for the portname. selects the first available port
+        selected_port = portname #setting the serial port that will be used for connection
+        ser = serial.Serial( selected_port.device, 115200, timeout=1) #create connection, in this case portname was COM7
+        #self.ser.isOpen()
+        ser.flushInput() #clears any data that has been received but not yet read
+        ser.flushOutput() #clears any data that has been written but not yet transmitted
+        return ser #object can now be used to read and write to the serial port 
 
-    #ser=connect_actuator()
+    ser=connect_actuator()
        
     def amp_on(self): #turns on the preamp
         test_str = 'amp_enable\r\n' #test string that will be sent to the piboard, formatted with newline character
@@ -231,7 +231,14 @@ class ImageProcessorApp:
         return
     
     def dummy_command(self): # Placeholder for future functionality, debug
-        print("Button clicked")
+        circle_radius = 38 #pixels
+        fiber_size = 125 #microns
+        pixel_size = fiber_size / circle_radius
+        #print("Detected circle radii:", circle_radius, 'Pixels')
+        print(f'Detected Pixel Size {pixel_size} microns/pixel')
+        print(f'What is 10 Pixel Movement? {pixel_size * 10} Microns, or {pixel_size * 10 * .001} mm')
+        print(f'What is 50 Pixel Movement? {pixel_size * 50} Microns, or {pixel_size * 50 * .001} mm')
+        #print("Button clicked")
     
     def time_lapse(self, rounds=10):
         for i in range(rounds):
@@ -327,15 +334,16 @@ class ImageProcessorApp:
             # Crop the output back to the original image size
             # Add to data storage with element number
             element = int(self.selected_element.get())
-
+            fiber_coordinate = self.circle_centers[-1]
             cv2.waitKey(0)
             #print(f'Element #{element}')
             print(f"Recorded circle centers: {self.circle_centers}")
-
+            print(f'Current Fiber Coordinate: {fiber_coordinate}')
             fiber_size = 125 #microns
             pixel_size = fiber_size / circle_radius
             #print("Detected circle radii:", circle_radius, 'Pixels')
-            #print("Detected pixel size", pixel_size, 'microns/pixel')
+            #print(f'Detected Pixel Size {pixel_size} microns/pixel')
+            
 
             self.circle_radii.append(circle_radius)
             self.pixle_size.append(pixel_size)
@@ -360,11 +368,16 @@ class ImageProcessorApp:
 
                 self.microns_moved_in_x.append(microns_movedx) # save values for the amount of microns moved, using the conversion between microns and pixels
                 self.microns_moved_in_y.append(microns_movedy)
+
+
+                mmMovedx = self.microns_moved_in_x[-1]
+                mmMovedy = self.microns_moved_in_y[-1]
+
                 print(f"Movement -- X: {movement_x} pixels, Y: {movement_y} pixels")
-                print(f'Microns Moved X: {self.microns_moved_in_x}')
-                print(f'Microns Moved Y: {self.microns_moved_in_y}')
-                print(f'MM Moved X: {int(self.microns_moved_in_x * .001)}')
-                print(f'MM Moved Y: {int(self.microns_moved_in_y * .001)}')
+                #print(f'Microns Moved X: {self.microns_moved_in_x}')
+                #print(f'Microns Moved Y: {self.microns_moved_in_y}')
+                print(f'Microns Moved X: {mmMovedx}')
+                print(f'Microns Moved Y: {mmMovedy}')
 
             if len(self.dac_values) > 1: # this is to use the saved values from the circle centers and the xy coords
                 
@@ -373,8 +386,8 @@ class ImageProcessorApp:
                 delta_DACx = abs(current_DAC[0]-previous_DAC[0]) # subtract these for both the x and y to find the change in dac
                 delta_DACy = abs(current_DAC[1]-previous_DAC[1])
                 
-                print(f'Dac values{self.dac_values}')
-                print(f'Change in DAC {delta_DACx} in X and {delta_DACy} in Y')
+                #print(f'Dac values{self.dac_values}')
+                #print(f'Change in DAC {delta_DACx} in X and {delta_DACy} in Y')
     
                 if delta_DACx != 0:
                     microns_per_ADUx = microns_movedx / delta_DACx
@@ -388,8 +401,8 @@ class ImageProcessorApp:
 
                 self.microns_per_ADU_in_x.append(microns_per_ADUx)
                 self.microns_per_ADU_in_y.append(microns_per_ADUy)
-                print(f'Microns/ADU X: {self.microns_per_ADU_in_x}')
-                print(f'Microns/ADU Y: {self.microns_per_ADU_in_y}')
+                #print(f'Microns/ADU X: {self.microns_per_ADU_in_x}')
+                #print(f'Microns/ADU Y: {self.microns_per_ADU_in_y}')
             
     def clear_all_data(self):
     # Reset all lists and variables
