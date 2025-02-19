@@ -71,7 +71,7 @@ class ImageProcessorApp:
 
         #Buttons for x anf y coordinates
         # X Coordinate Controls
-        self.xcoord_label = tk.Label(self.coord_frame, text="X Coordinate")
+        self.xcoord_label = tk.Label(self.coord_frame, text="X DAC")
         self.xcoord_label.pack()
 
         self.xcoord_entry = tk.Entry(self.coord_frame) #create entry places for the xy coordinates
@@ -79,7 +79,7 @@ class ImageProcessorApp:
         self.xcoord_entry.insert(2047, "2047")  # Set default value
 
         # Y Coordinate Controls
-        self.ycoord_label = tk.Label(self.coord_frame, text="Y Coordinate")
+        self.ycoord_label = tk.Label(self.coord_frame, text="Y DAC")
         self.ycoord_label.pack()
 
         self.ycoord_entry = tk.Entry(self.coord_frame) #create entry places for the xy coordinates
@@ -87,14 +87,14 @@ class ImageProcessorApp:
         self.ycoord_entry.insert(2047, "2047")  # Set default value
 
         # Coordinates Button
-        self.update_coords_button = tk.Button(self.coord_frame, text="Update Coordinates", command=self.update_coordinates)
+        self.update_coords_button = tk.Button(self.coord_frame, text="Set DAC", command=self.update_coordinates)
         self.update_coords_button.pack(pady=5)
 
         self.exposure_label = tk.Label(self.coord_frame, text="Exposure Time (μs):")
         self.exposure_label.pack()
         self.exposure_entry = tk.Entry(self.coord_frame)
         self.exposure_entry.pack()
-        self.exposure_entry.insert(27000,'27000')
+        self.exposure_entry.insert(37000,'37000')
 
         self.gain_label = tk.Label(self.coord_frame, text="Gain Value:")
         self.gain_label.pack()
@@ -144,12 +144,12 @@ class ImageProcessorApp:
         #self.circle_radius = []
 
 # Initialize plot, label axis 
-        self.fig, self.ax = plt.subplots()
-        self.ax.set_title("Fiber Tip Centers")
-        self.ax.set_xlabel("X")
-        self.ax.set_ylabel("Y")
-        self.canvas = FigureCanvasTkAgg(self.fig, master=self.root) #creates widget that allows for matplotlib
-        self.canvas.get_tk_widget().pack(fill=tk.BOTH, expand=True)
+        # self.fig, self.ax = plt.subplots()
+        # self.ax.set_title("Fiber Tip Centers")
+        # self.ax.set_xlabel("X")
+        # self.ax.set_ylabel("Y")
+        # self.canvas = FigureCanvasTkAgg(self.fig, master=self.root) #creates widget that allows for matplotlib
+        # self.canvas.get_tk_widget().pack(fill=tk.BOTH, expand=True)
 
     def connect_camera(self):
         # Initialize camera
@@ -319,13 +319,16 @@ class ImageProcessorApp:
             # calculate x,y coordinate of center
             cX = int(M["m10"] / M["m00"])
             cY = int(M["m01"] / M["m00"])
+
+            targetx = 850
+            targety = 500
             
             # put text and highlight the center
             cv2.circle(output, (cX, cY), 5, (0, 255, 255), -1)
             cv2.putText(output, "Centroid", (cX - 25, cY - 25),cv2.FONT_HERSHEY_SIMPLEX, 0.5, (0, 255, 255), 2)
-            #
-            #  display the image
-            #cv2.imshow("Image", output)
+            #cv2.circle(output, (targetx, targety), 5, (50, 205, 50), -1)
+           # cv2.putText(output, "TARGET", (targetx + 25, targety + 25),cv2.FONT_HERSHEY_SIMPLEX, 0.5, (50, 205, 50), 2)
+            
             
             # print(cX)
             # print(cY)
@@ -344,14 +347,15 @@ class ImageProcessorApp:
             #print("Detected circle radii:", circle_radius, 'Pixels')
             #print(f'Detected Pixel Size {pixel_size} microns/pixel')
             
-
+            targetdist = np.sqrt((820-  cX)**2+(510 - cY )**2)
             self.circle_radii.append(circle_radius)
             self.pixle_size.append(pixel_size)
 
             color_mapped_image = cv2.applyColorMap(output, cv2.COLORMAP_PLASMA) # changes the output photo to plasma color map(looks cool)
             self.processed_image = color_mapped_image #assign value to new image so it can be displayed. idk why i did this i realize now that this is not needed 
             self.display_image(self.processed_image, self.frame_processed)
-            self.update_plot()  # Update the existing plot with new data
+            #self.update_plot()  # Update the existing plot with new data
+            print(f'Dinstance From Target: {targetdist} pixels, or {targetdist * pixel_size}')
             
             if len(self.circle_centers) > 1:
                 previous_center = self.circle_centers[-2] # second most recent input in the list 
@@ -369,7 +373,6 @@ class ImageProcessorApp:
                 self.microns_moved_in_x.append(microns_movedx) # save values for the amount of microns moved, using the conversion between microns and pixels
                 self.microns_moved_in_y.append(microns_movedy)
 
-
                 mmMovedx = self.microns_moved_in_x[-1]
                 mmMovedy = self.microns_moved_in_y[-1]
 
@@ -378,6 +381,7 @@ class ImageProcessorApp:
                 #print(f'Microns Moved Y: {self.microns_moved_in_y}')
                 print(f'Microns Moved X: {mmMovedx}')
                 print(f'Microns Moved Y: {mmMovedy}')
+                
 
             if len(self.dac_values) > 1: # this is to use the saved values from the circle centers and the xy coords
                 
@@ -422,11 +426,11 @@ class ImageProcessorApp:
         self.pixle_size = []
         
         # Optionally clear the plots
-        self.ax.clear()
-        self.ax.set_title("Fiber Tip Centers")
-        self.ax.set_xlabel("X Pixels")
-        self.ax.set_ylabel("Y Pixels")
-        self.canvas.draw()
+        # self.ax.clear()
+        # self.ax.set_title("Fiber Tip Centers")
+        # self.ax.set_xlabel("X Pixels")
+        # self.ax.set_ylabel("Y Pixels")
+        # self.canvas.draw()
 
 
         print("All data cleared.")
