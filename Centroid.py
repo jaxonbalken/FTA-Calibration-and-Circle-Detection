@@ -168,15 +168,15 @@ class ImageProcessorApp:
         self.camera_initialized = True  # Set camera initialization flag
         print('Camera Ready')
 
-    def connect_actuator(portname=ports[0]): #connects the actuator, sets a default value for the portname. selects the first available port
-        selected_port = portname #setting the serial port that will be used for connection
-        ser = serial.Serial( selected_port.device, 115200, timeout=1) #create connection, in this case portname was COM7
-        #self.ser.isOpen()
-        ser.flushInput() #clears any data that has been received but not yet read
-        ser.flushOutput() #clears any data that has been written but not yet transmitted
-        return ser #object can now be used to read and write to the serial port 
+    # def connect_actuator(portname=ports[0]): #connects the actuator, sets a default value for the portname. selects the first available port
+    #     selected_port = portname #setting the serial port that will be used for connection
+    #     ser = serial.Serial( selected_port.device, 115200, timeout=1) #create connection, in this case portname was COM7
+    #     #self.ser.isOpen()
+    #     ser.flushInput() #clears any data that has been received but not yet read
+    #     ser.flushOutput() #clears any data that has been written but not yet transmitted
+    #     return ser #object can now be used to read and write to the serial port 
 
-    ser=connect_actuator()
+    #ser=connect_actuator()
        
     def amp_on(self): #turns on the preamp
         test_str = 'amp_enable\r\n' #test string that will be sent to the piboard, formatted with newline character
@@ -289,8 +289,12 @@ class ImageProcessorApp:
                 # Capture image
                 original_image = self.camera.capture()
                 self.original_image = original_image
+                targetx = 820
+                targety = 510
+                cv2.circle(original_image, (targetx, targety), 5, (50, 205, 50), -1)
+                cv2.waitKey(0)
                 self.display_image(original_image, self.frame_original)
-                print("Image captured successfully.")
+            
                 return  # Exit if image capture was successful
 
             except Exception as e:
@@ -327,7 +331,7 @@ class ImageProcessorApp:
             cv2.circle(output, (cX, cY), 5, (0, 255, 255), -1)
             cv2.putText(output, "Centroid", (cX - 25, cY - 25),cv2.FONT_HERSHEY_SIMPLEX, 0.5, (0, 255, 255), 2)
             #cv2.circle(output, (targetx, targety), 5, (50, 205, 50), -1)
-           # cv2.putText(output, "TARGET", (targetx + 25, targety + 25),cv2.FONT_HERSHEY_SIMPLEX, 0.5, (50, 205, 50), 2)
+            #cv2.putText(output, "TARGET", (targetx + 25, targety + 25),cv2.FONT_HERSHEY_SIMPLEX, 0.5, (50, 205, 50), 2)
             
             
             # print(cX)
