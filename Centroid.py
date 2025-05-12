@@ -51,44 +51,44 @@ class ImageProcessorApp:
         self.coord_frame.pack(side=tk.RIGHT, padx=10, pady=10)
 
         # Element Number Controls
-        # Define element number options
-        self.element_options = [str(i) for i in range(1, 9)]  #options from 1 to 8
-        self.selected_element = tk.StringVar(root)
-        self.selected_element.set(self.element_options[0])  # Default value
+        # # Define element number options
+        # self.element_options = [str(i) for i in range(1, 9)]  #options from 1 to 8
+        # self.selected_element = tk.StringVar(root)
+        # self.selected_element.set(self.element_options[0])  # Default value
 
-        # Element Number Dropdown
-        self.element_label = tk.Label(self.coord_frame, text="Element Number")
-        self.element_label.pack()
+        # # Element Number Dropdown
+        # # self.element_label = tk.Label(self.coord_frame, text="Element Number")
+        # # self.element_label.pack()
 
-        self.element_dropdown = tk.OptionMenu(self.coord_frame, self.selected_element, *self.element_options)
-        self.element_dropdown.pack()
+        # self.element_dropdown = tk.OptionMenu(self.coord_frame, self.selected_element, *self.element_options)
+        # self.element_dropdown.pack()
 
-        #PREAMPS enable/disable button
-        self.amps_var = tk.BooleanVar(value=False) #create boolean value to make sure the preamps always starts disabled
+        # #PREAMPS enable/disable button
+        # self.amps_var = tk.BooleanVar(value=False) #create boolean value to make sure the preamps always starts disabled
 
-        self.preamps = tk.Checkbutton(self.coord_frame, text = 'Enable XY Preamps', variable=self.amps_var, command=self.toggle_amp)
-        self.preamps.pack(padx=10,pady=10)
+        # self.preamps = tk.Checkbutton(self.coord_frame, text = 'Enable XY Preamps', variable=self.amps_var, command=self.toggle_amp)
+        # self.preamps.pack(padx=10,pady=10)
 
-        #Buttons for x anf y coordinates
-        # X Coordinate Controls
-        self.xcoord_label = tk.Label(self.coord_frame, text="X DAC")
-        self.xcoord_label.pack()
+        # #Buttons for x anf y coordinates
+        # # X Coordinate Controls
+        # self.xcoord_label = tk.Label(self.coord_frame, text="X DAC")
+        # self.xcoord_label.pack()
 
-        self.xcoord_entry = tk.Entry(self.coord_frame) #create entry places for the xy coordinates
-        self.xcoord_entry.pack()
-        self.xcoord_entry.insert(2047, "2047")  # Set default value
+        # self.xcoord_entry = tk.Entry(self.coord_frame) #create entry places for the xy coordinates
+        # self.xcoord_entry.pack()
+        # self.xcoord_entry.insert(2047, "2047")  # Set default value
 
-        # Y Coordinate Controls
-        self.ycoord_label = tk.Label(self.coord_frame, text="Y DAC")
-        self.ycoord_label.pack()
+        # # Y Coordinate Controls
+        # self.ycoord_label = tk.Label(self.coord_frame, text="Y DAC")
+        # self.ycoord_label.pack()
 
-        self.ycoord_entry = tk.Entry(self.coord_frame) #create entry places for the xy coordinates
-        self.ycoord_entry.pack()
-        self.ycoord_entry.insert(2047, "2047")  # Set default value
+        # self.ycoord_entry = tk.Entry(self.coord_frame) #create entry places for the xy coordinates
+        # self.ycoord_entry.pack()
+        # self.ycoord_entry.insert(2047, "2047")  # Set default value
 
-        # Coordinates Button
-        self.update_coords_button = tk.Button(self.coord_frame, text="Set DAC", command=self.update_coordinates)
-        self.update_coords_button.pack(pady=5)
+        # # Coordinates Button
+        # self.update_coords_button = tk.Button(self.coord_frame, text="Set DAC", command=self.update_coordinates)
+        # self.update_coords_button.pack(pady=5)
 
         self.exposure_label = tk.Label(self.coord_frame, text="Exposure Time (μs):")
         self.exposure_label.pack()
@@ -115,8 +115,8 @@ class ImageProcessorApp:
         self.process_button = tk.Button(self.button_frame, text="Process Image", command=self.process_image) #button for processing image 
         self.process_button.pack(side=tk.LEFT, padx=5, pady=5)
 
-        self.automate_button = tk.Button(self.button_frame, text="Start Automation", command=self.test_run) # button for the automation process
-        self.automate_button.pack(side=tk.LEFT, padx=5, pady=5)
+        # self.automate_button = tk.Button(self.button_frame, text="Start Automation", command=self.test_run) # button for the automation process
+        # self.automate_button.pack(side=tk.LEFT, padx=5, pady=5)
 
         self.timelapse_button = tk.Button(self.button_frame, text="General Info", command=self.dummy_command)
         self.timelapse_button.pack(side=tk.LEFT, padx=5, pady=5)
@@ -328,9 +328,9 @@ class ImageProcessorApp:
             targety = 500
             
             # put text and highlight the center
-            cv2.circle(output, (cX, cY), 5, (0, 255, 255), -1)
-            cv2.putText(output, "Centroid", (cX - 25, cY - 25),cv2.FONT_HERSHEY_SIMPLEX, 0.5, (0, 255, 255), 2)
-            #cv2.circle(output, (targetx, targety), 5, (50, 205, 50), -1)
+            cv2.circle(output, (cX, cY), 5, (255, 255, 255), -1)
+            cv2.putText(output, "Centroid", (cX + 25, cY + 25),cv2.FONT_HERSHEY_SIMPLEX, 0.5, (255, 255, 255), 2)
+            #cv2.circle(output, (targetx, targety), 5, (255,255,255), -1)
             #cv2.putText(output, "TARGET", (targetx + 25, targety + 25),cv2.FONT_HERSHEY_SIMPLEX, 0.5, (50, 205, 50), 2)
             
             
@@ -340,7 +340,7 @@ class ImageProcessorApp:
             circle_radius = 38 #pixels
             # Crop the output back to the original image size
             # Add to data storage with element number
-            element = int(self.selected_element.get())
+            #element = int(self.selected_element.get())
             fiber_coordinate = self.circle_centers[-1]
             cv2.waitKey(0)
             #print(f'Element #{element}')
@@ -356,7 +356,7 @@ class ImageProcessorApp:
             self.pixle_size.append(pixel_size)
 
             color_mapped_image = cv2.applyColorMap(output, cv2.COLORMAP_PLASMA) # changes the output photo to plasma color map(looks cool)
-            self.processed_image = color_mapped_image #assign value to new image so it can be displayed. idk why i did this i realize now that this is not needed 
+            self.processed_image = output #assign value to new image so it can be displayed. idk why i did this i realize now that this is not needed 
             self.display_image(self.processed_image, self.frame_processed)
             #self.update_plot()  # Update the existing plot with new data
             print(f'Dinstance From Target: {targetdist} pixels, or {targetdist * pixel_size}')
