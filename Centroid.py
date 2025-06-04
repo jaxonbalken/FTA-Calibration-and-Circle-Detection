@@ -328,7 +328,7 @@ class ImageProcessorApp:
             targety = 500
             
             # put text and highlight the center
-            cv2.circle(output, (cX, cY), 5, (255, 255, 255), -1)
+            cv2.circle(output, (cX, cY), 5, (0, 0, 0), -1)
             cv2.putText(output, "Centroid", (cX + 25, cY + 25),cv2.FONT_HERSHEY_SIMPLEX, 0.5, (255, 255, 255), 2)
             #cv2.circle(output, (targetx, targety), 5, (255,255,255), -1)
             #cv2.putText(output, "TARGET", (targetx + 25, targety + 25),cv2.FONT_HERSHEY_SIMPLEX, 0.5, (50, 205, 50), 2)
