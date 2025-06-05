@@ -53,9 +53,31 @@ class CameraApp:
         self.exposure_entry.insert(30000, "30000")  # Default exposure
         self.exposure_entry.pack()
 
+        #Target Rate input
+        self.target_label = tk.Label(master, text= 'Target Rate') 
+        self.target_label.pack()
+        self.target_entry = tk.Entry(master)
+        self.target_entry.insert(100, '100')
+        self.target_entry.pack()
+
+        #Number of frames input
+        self.frames_label = tk.Label(master, text= 'Number Of Frames') 
+        self.frames_label.pack()
+        self.frames_entry = tk.Entry(master)
+        self.frames_entry.insert(1000, '1000')
+        self.frames_entry.pack()
+
         # Buttons
+
         self.button_frame = tk.Frame(master)
         self.button_frame.pack(fill=tk.X, side=tk.BOTTOM)
+
+        self.cameraparameters_button = tk.Button(self.button_frame, text="Save Parameters", command = self.dummy_command)
+        self.cameraparameters_button.pack(side=tk.TOP, padx=5, pady=5)
+        
+        # Video display
+        self.video_frame = tk.Label(master)
+        self.video_frame.pack()
 
         self.connect_button = tk.Button(self.button_frame, text="Connect Camera", command=self.connect_camera)
         self.connect_button.pack(side=tk.LEFT, padx=5, pady=5)
@@ -66,9 +88,9 @@ class CameraApp:
         self.stop_button = tk.Button(self.button_frame, text="Stop Feed", command=self.stop_feed, state=tk.DISABLED)
         self.stop_button.pack(side=tk.LEFT, padx=5, pady=5)
 
-        # Video display
-        self.video_frame = tk.Label(master)
-        self.video_frame.pack()
+
+    def dummy_command(self):
+        print('Button Pressed')
 
     def connect_camera(self):
         try:
@@ -159,7 +181,7 @@ class CameraApp:
             frame_resized = cv2.resize(frame, (640, 480))
 
             #reset roi to involve target
-            
+
 
             # Convert to Tkinter-compatible image
             img = Image.fromarray(frame_resized, mode='L')
