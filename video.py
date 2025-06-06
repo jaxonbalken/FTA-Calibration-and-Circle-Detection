@@ -37,7 +37,8 @@ class CameraApp:
         self.camera = None
         self.streaming = False
         self.stream_start_time = None
-        
+
+        #self.current_roi = (887, 546, 640, 480)  # Default ROI
 
         # Gain input
         self.gain_label = tk.Label(master, text="Gain:")
@@ -54,11 +55,19 @@ class CameraApp:
         self.exposure_entry.pack()
 
         #Target Rate input
-        self.target_label = tk.Label(master, text= 'Target Rate') 
+        self.target_label = tk.Label(master, text= 'Target Rate (fps)') 
         self.target_label.pack()
         self.target_entry = tk.Entry(master)
         self.target_entry.insert(100, '100')
         self.target_entry.pack()
+
+        # Frame Rate Buttons
+        self.framerate_button_frame = tk.Frame(master)
+        self.framerate_button_frame.pack()
+        preset_rates = [10, 30, 60, 100, 200]
+        for rate in preset_rates:
+            button = tk.Button(self.framerate_button_frame, text=f"{rate} fps", command=lambda r=rate: self.set_frame_rate(r))
+            button.pack(side=tk.LEFT, padx=2, pady=2)
 
         #Number of frames input
         self.frames_label = tk.Label(master, text= 'Number Of Frames') 
@@ -67,14 +76,35 @@ class CameraApp:
         self.frames_entry.insert(1000, '1000')
         self.frames_entry.pack()
 
-        # Buttons
+        # ROI Selection Dropdown
+        tk.Label(master, text="Select ROI Preset:").pack()
+        self.roi_options = ["Full Frame", "640x480", "320x240"]
+        self.selected_roi = tk.StringVar(master)
+        self.selected_roi.set(self.roi_options[1])
+        tk.OptionMenu(master, self.selected_roi, *self.roi_options, command=self.handle_roi_selection).pack()
 
+        # ROI Position Control
+        tk.Label(master, text="ROI Position (Start X, Start Y):").pack()
+        self.roi_pos_frame = tk.Frame(master)
+        self.roi_pos_frame.pack()
+        self.roi_startx = tk.Entry(self.roi_pos_frame, width=5)
+        self.roi_startx.insert(887, "887")
+        self.roi_startx.pack(side=tk.LEFT)
+        self.roi_starty = tk.Entry(self.roi_pos_frame, width=5)
+        self.roi_starty.insert(546, "546")
+        self.roi_starty.pack(side=tk.LEFT)
+        tk.Button(master, text="Set ROI Position", command=self.set_roi_position).pack(pady=5)
+
+
+        # Buttons
+        self.sanity_check_button = tk.Button(master, text="Check Actual Frame Rate",command=self.run_sanity_check)
+        self.sanity_check_button.pack(pady=5)
         self.button_frame = tk.Frame(master)
         self.button_frame.pack(fill=tk.X, side=tk.BOTTOM)
 
         self.cameraparameters_button = tk.Button(self.button_frame, text="Save Parameters", command = self.dummy_command)
         self.cameraparameters_button.pack(side=tk.TOP, padx=5, pady=5)
-        
+
         # Video display
         self.video_frame = tk.Label(master)
         self.video_frame.pack()
@@ -92,6 +122,82 @@ class CameraApp:
     def dummy_command(self):
         print('Button Pressed')
 
+    def save_parameters(self):
+        try:
+            self.saved_gain = int(self.gain_entry.get())
+            self.saved_exposure = int(self.exposure_entry.get())
+            self.saved_target_rate = int(self.target_entry.get())
+            self.saved_num_frames = int(self.frames_entry.get())
+
+            # Also save current ROI and position
+            self.saved_roi = self.current_roi
+
+            print("[PARAMETERS SAVED]")
+            print(f"Gain: {self.saved_gain}")
+            print(f"Exposure: {self.saved_exposure} µs")
+            print(f"Target Rate: {self.saved_target_rate} fps")
+            print(f"Number of Frames: {self.saved_num_frames}")
+            print(f"ROI: {self.saved_roi}")
+
+        except ValueError:
+            messagebox.showerror("Save Failed", "Please enter valid numeric values.")
+    
+    def set_frame_rate(self, rate):
+        self.target_entry.delete(0, tk.END)
+        self.target_entry.insert(0, str(rate))
+
+    def get_target_rate(self):
+        try:
+            return int(self.target_entry.get())
+        except ValueError:
+            print('Error!! Using Fallback,')
+            return 100  # fallback/default
+    def set_roi_position(self):
+        try:
+            x = int(self.roi_startx.get())
+            y = int(self.roi_starty.get())
+            _, _, w, h = self.current_roi
+            self.current_roi = (x, y, w, h)
+            print(f"[ROI] Updated start position: ({x}, {y}), size ({w}x{h})")
+        except ValueError:
+            print("[ERROR] Invalid ROI position input.")
+    
+    def update_current_roi_from_ui(self):
+        """Update self.current_roi based on dropdown and ROI position input."""
+        try:
+            center_x = int(self.roi_startx.get())
+            center_y = int(self.roi_starty.get())
+            roi_str = self.selected_roi.get()
+            print(f"[DEBUG] ROI selection: {roi_str}, Center: ({center_x}, {center_y})")
+            if roi_str == "Full Frame":
+                # Full Frame will be set explicitly elsewhere using the camera info
+                full_width, full_height, _, _ = self.camera.get_roi_format()
+                self.current_roi = (0, 0, full_width, full_height)
+                print(f"[ROI] Full Frame: {full_width}x{full_height}")
+            else:
+                w, h = map(int, roi_str.split('x'))
+
+                start_x = center_x - w // 2
+                start_y = center_y - h // 2
+
+                self.current_roi = (start_x, start_y, w, h)
+                print(f"[DEBUG] Centered ROI: Start({start_x}, {start_y}), Size({w}x{h})")
+        except Exception as e:
+            print(f"[ERROR] Failed to update ROI from UI: {e}")
+            messagebox.showerror("Invalid ROI", "ROI values must be numeric and in WIDTHxHEIGHT format.")
+
+    def handle_roi_selection(self, selection):
+        if selection == "Full Frame":
+            try:
+                self.camera.set_roi(width=1936, height=1096) 
+                print(f"[ROI] Full Frame: {1936}x{1096}")
+            except Exception:
+                print("[ERROR] Full frame selection failed.")
+        else:
+            print(f"[DEBUG] ROI dropdown changed to: {selection}")
+            self.update_current_roi_from_ui()
+
+
     def connect_camera(self):
         try:
             asi.init('C:\\Users\\ASE\\Desktop\\Ari Lab-2023\\Pics\\ASIStudio\\ASICamera2.dll')
@@ -100,10 +206,16 @@ class CameraApp:
                 messagebox.showerror("Error", "No cameras found.")
                 self.master.destroy()
                 return
-
+        
             self.camera = asi.Camera(0)
             self.camera.set_control_value(asi.ASI_HIGH_SPEED_MODE, 1)
-            self.camera.set_roi()  # Full frame
+            self.camera.set_image_type(asi.ASI_IMG_RAW8)
+            self.camera.set_roi(width=320, height=240) 
+            gain_value = int(self.gain_entry.get())
+            exposure_time = int(self.exposure_entry.get())
+            self.camera.set_control_value(asi.ASI_GAIN, gain_value)
+            self.camera.set_control_value(asi.ASI_EXPOSURE, exposure_time)
+
             self.camera_initialized = True
             print("Camera Ready")  # Just print instead of showing a popup
         except Exception as e:
@@ -118,11 +230,16 @@ class CameraApp:
         try:
             gain_value = int(self.gain_entry.get())
             exposure_time = int(self.exposure_entry.get())
+            print(f"[DEBUG] Gain: {gain_value}, Exposure: {exposure_time} µs")
         except ValueError:
             messagebox.showerror("Error", "Please enter valid integers for gain and exposure.")
             return
 
         try:
+            self.update_current_roi_from_ui()
+            x, y, w, h = self.current_roi
+            self.camera.set_roi(start_x=x, start_y=y, width=w, height=h)
+            print(f"[DEBUG] Applying ROI before video capture: Start({x}, {y}), Size({w}x{h})")
             self.camera.set_control_value(asi.ASI_GAIN, gain_value)
             self.camera.set_control_value(asi.ASI_EXPOSURE, exposure_time)
 
@@ -156,6 +273,7 @@ class CameraApp:
             return
 
         try:
+            frame_start_time = time.time()
             # Get ROI dimensions
             width, height, _, _ = self.camera.get_roi_format()
             if not self.roi_info_logged:
@@ -190,6 +308,12 @@ class CameraApp:
             # Update GUI frame
             self.video_frame.configure(image=imgtk)
             self.video_frame.image = imgtk  # prevent garbage collection
+            rate = self.get_target_rate()
+            frame_interval_us = 1e6 / rate
+            elapsed_us = (time.time() - frame_start_time) * 1e6
+            delay_ms = max(1, int((frame_interval_us - elapsed_us) / 1000))
+            self.master.after(delay_ms, self.update_feed)
+
 
         except Exception as e:
             print("\n[ERROR] Live feed failed.")
@@ -197,11 +321,57 @@ class CameraApp:
             traceback.print_exc()
             print("[INFO] Stopping video feed...\n")
             return
-        self.master.after(30, self.update_feed)
+       #self.master.after(30, self.update_feed)
     def on_close(self):
         if self.streaming:
             self.stop_feed()
         self.master.destroy()
+
+    def run_sanity_check(self):
+        try:
+            num_frames = int(self.frames_entry.get())
+            
+        except ValueError:
+            num_frames = 100
+        self.check_actual_frame_rate(num_frames=num_frames)
+
+    def check_actual_frame_rate(self, num_frames=100):
+        if not self.camera_initialized:
+            print("[ERROR] Camera not initialized.")
+            return
+
+        rate_frame = int(self.target_entry.get())
+        
+        print(f"[INFO] Starting sanity check: capturing {num_frames} frames...")
+        print(f"[INFO] Gain: {self.gain_entry.get()}")
+        print(f'[INFO] Exposure: {self.exposure_entry.get()} microseconds')
+        print(f'[INFO] Target frame rate: {rate_frame} fps')
+
+        try:
+            # === Match current ROI format ===
+            width, height, bin, image_type = self.camera.get_roi_format()
+            
+            self.camera.set_roi(width=320, height=240)
+            print(f"[INFO] Using ROI for sanity check: {width}x{height}, bin: {bin}, image_type: {image_type}")
+
+            self.camera.start_video_capture()
+
+            frames = []
+            t_start = time.time()
+
+            for _ in range(num_frames):
+                frame = self.camera.capture_video_frame(timeout=1000)
+                frames.append(frame)
+
+            t_end = time.time()
+            self.camera.stop_video_capture()
+
+            actual_rate = num_frames / (t_end - t_start)
+            print(f"[RESULT] Actual capture rate: {actual_rate:.2f} fps")
+
+        except Exception as e:
+            print("[ERROR] Sanity check failed:", e)
+            traceback.print_exc()
 
 
 if __name__ == "__main__":
