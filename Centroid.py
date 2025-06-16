@@ -7,7 +7,7 @@ import os
 import zwoasi as asi
 import matplotlib.pyplot as plt
 from matplotlib.backends.backend_tkagg import FigureCanvasTkAgg
-from time import time
+import time
 import pycromanager
 import sys
 from scipy import optimize
@@ -101,6 +101,8 @@ class ImageProcessorApp:
         self.gain_entry = tk.Entry(self.coord_frame)
         self.gain_entry.pack()
         self.gain_entry.insert(0,'0')
+
+        
         
         # Buttons for load and process
         self.button_frame = tk.Frame(root)
@@ -311,7 +313,7 @@ class ImageProcessorApp:
             if self.original_image is None:
                 messagebox.showerror("Error", "No image captured")
                 return
-        
+            start =  time.time()
             output = self.original_image.copy()
 
             # convert the grayscale image to binary image
@@ -360,6 +362,7 @@ class ImageProcessorApp:
             self.display_image(self.processed_image, self.frame_processed)
             #self.update_plot()  # Update the existing plot with new data
             print(f'Dinstance From Target: {targetdist} pixels, or {targetdist * pixel_size}')
+        
             
             if len(self.circle_centers) > 1:
                 previous_center = self.circle_centers[-2] # second most recent input in the list 
@@ -411,6 +414,11 @@ class ImageProcessorApp:
                 self.microns_per_ADU_in_y.append(microns_per_ADUy)
                 #print(f'Microns/ADU X: {self.microns_per_ADU_in_x}')
                 #print(f'Microns/ADU Y: {self.microns_per_ADU_in_y}')
+
+            end = time.time()
+            fulltime = end - start
+            print(f'processing time: {fulltime}')
+              
             
     def clear_all_data(self):
     # Reset all lists and variables

@@ -6,8 +6,7 @@ import traceback
 import ctypes.wintypes
 
 import tkinter as tk
-from tkinter import messagebox  # Explicit imports, no wildcard
-from tkinter import filedialog  # *** CHANGED/ADDED: import filedialog for save dialog ***
+from tkinter import messagebox, filedialog
 
 import numpy as np
 import cv2
@@ -15,7 +14,7 @@ import cv2
 import zwoasi as asi
 import h5py
 
-from PIL import Image, ImageTk 
+from PIL import Image, ImageTk
 
 import matplotlib
 import matplotlib.pyplot as plt
@@ -30,35 +29,32 @@ class CameraApp:
         self.master = master
         self.master.title("Live Video Feed")
 
-        self.streaming = True
-        self.update_feed()
+        self.streaming = False
         self.camera_initialized = False
         self.roi_info_logged = False
         self.camera = None
-        self.streaming = False
         self.stream_start_time = None
-
         self.current_roi = (887, 546, 640, 480)  # Default ROI
 
         # Gain input
         self.gain_label = tk.Label(master, text="Gain:")
         self.gain_label.pack()
         self.gain_entry = tk.Entry(master)
-        self.gain_entry.insert(0, "0")  # Default gain
+        self.gain_entry.insert(0, "0")
         self.gain_entry.pack()
 
         # Exposure input
         self.exposure_label = tk.Label(master, text="Exposure (µs):")
         self.exposure_label.pack()
         self.exposure_entry = tk.Entry(master)
-        self.exposure_entry.insert(30000, "30000")  # Default exposure
+        self.exposure_entry.insert(0, "30000")
         self.exposure_entry.pack()
 
-        #Target Rate input
-        self.target_label = tk.Label(master, text= 'Target Rate (fps)') 
+        # Target Rate input
+        self.target_label = tk.Label(master, text='Target Rate (fps)')
         self.target_label.pack()
         self.target_entry = tk.Entry(master)
-        self.target_entry.insert(100, '100')
+        self.target_entry.insert(0, '100')
         self.target_entry.pack()
 
         # Frame Rate Buttons
@@ -69,11 +65,11 @@ class CameraApp:
             button = tk.Button(self.framerate_button_frame, text=f"{rate} fps", command=lambda r=rate: self.set_frame_rate(r))
             button.pack(side=tk.LEFT, padx=2, pady=2)
 
-        #Number of frames input
-        self.frames_label = tk.Label(master, text= 'Number Of Frames') 
+        # Number of frames input
+        self.frames_label = tk.Label(master, text='Number Of Frames')
         self.frames_label.pack()
         self.frames_entry = tk.Entry(master)
-        self.frames_entry.insert(1000, '1000')
+        self.frames_entry.insert(0, '1000')
         self.frames_entry.pack()
 
         # ROI Selection Dropdown
@@ -88,30 +84,25 @@ class CameraApp:
         self.roi_pos_frame = tk.Frame(master)
         self.roi_pos_frame.pack()
         self.roi_startx = tk.Entry(self.roi_pos_frame, width=5)
-        self.roi_startx.insert(887, "887")
+        self.roi_startx.insert(0, "887")
         self.roi_startx.pack(side=tk.LEFT)
         self.roi_starty = tk.Entry(self.roi_pos_frame, width=5)
-        self.roi_starty.insert(546, "546")
+        self.roi_starty.insert(0, "546")
         self.roi_starty.pack(side=tk.LEFT)
         tk.Button(master, text="Set ROI Position", command=self.set_roi_position).pack(pady=5)
 
         # Buttons
-        self.sanity_check_button = tk.Button(master, text="Check Actual Frame Rate",command=self.run_sanity_check)
+        self.sanity_check_button = tk.Button(master, text="Check Actual Frame Rate", command=self.run_sanity_check)
         self.sanity_check_button.pack(pady=5)
+
         self.button_frame = tk.Frame(master)
         self.button_frame.pack(fill=tk.X, side=tk.BOTTOM)
 
-        self.cameraparameters_button = tk.Button(self.button_frame, text="Save Parameters", command = self.dummy_command)
+        self.cameraparameters_button = tk.Button(self.button_frame, text="Save Parameters", command=self.dummy_command)
         self.cameraparameters_button.pack(side=tk.TOP, padx=5, pady=5)
 
-        # *** CHANGED/ADDED: Save last frames button ***
         self.save_button = tk.Button(self.button_frame, text="Save Last Frames", command=self.save_last_frames)
         self.save_button.pack(side=tk.LEFT, padx=5, pady=5)
-        # *** END CHANGE ***
-
-        # Video display
-        self.video_frame = tk.Label(master)
-        self.video_frame.pack()
 
         self.connect_button = tk.Button(self.button_frame, text="Connect Camera", command=self.connect_camera)
         self.connect_button.pack(side=tk.LEFT, padx=5, pady=5)
@@ -122,6 +113,8 @@ class CameraApp:
         self.stop_button = tk.Button(self.button_frame, text="Stop Feed", command=self.stop_feed, state=tk.DISABLED)
         self.stop_button.pack(side=tk.LEFT, padx=5, pady=5)
 
+        self.video_frame = tk.Label(master)
+        self.video_frame.pack()
 
     def dummy_command(self):
         print('Button Pressed')
@@ -132,20 +125,11 @@ class CameraApp:
             self.saved_exposure = int(self.exposure_entry.get())
             self.saved_target_rate = int(self.target_entry.get())
             self.saved_num_frames = int(self.frames_entry.get())
-
-            # Also save current ROI and position
             self.saved_roi = self.current_roi
-
             print("[PARAMETERS SAVED]")
-            print(f"Gain: {self.saved_gain}")
-            print(f"Exposure: {self.saved_exposure} µs")
-            print(f"Target Rate: {self.saved_target_rate} fps")
-            print(f"Number of Frames: {self.saved_num_frames}")
-            print(f"ROI: {self.saved_roi}")
-
         except ValueError:
             messagebox.showerror("Save Failed", "Please enter valid numeric values.")
-    
+
     def set_frame_rate(self, rate):
         self.target_entry.delete(0, tk.END)
         self.target_entry.insert(0, str(rate))
@@ -154,18 +138,16 @@ class CameraApp:
         try:
             return int(self.target_entry.get())
         except ValueError:
-            print('Error!! Using Fallback,')
-            return 100  # fallback/default
+            return 100
+
     def set_roi_position(self):
         try:
             x = int(self.roi_startx.get())
             y = int(self.roi_starty.get())
-            # *** CHANGED/ADDED: subtract half width/height from x, y ***
             _, _, w, h = self.current_roi
             x -= w // 2
             y -= h // 2
             self.current_roi = (x, y, w, h)
-            print(f"[ROI] Updated start position: ({x}, {y}), size ({w}x{h})")
         except ValueError:
             print("[ERROR] Invalid ROI position input.")
 
@@ -173,7 +155,6 @@ class CameraApp:
         try:
             x = int(self.roi_startx.get())
             y = int(self.roi_starty.get())
-            # *** CHANGED/ADDED: subtract half width/height for positioning ***
             if selection == "640x480":
                 x -= 640 // 2
                 y -= 480 // 2
@@ -184,19 +165,11 @@ class CameraApp:
             x, y = 887, 546
 
         if selection == "Full Frame":
-            try:
-                full_width, full_height, _, _ = self.camera.get_roi_format()
-                self.current_roi = (0, 0, full_width, full_height)
-                print(f"[ROI] Full Frame: {full_width}x{full_height}")
-            except Exception:
-                print("[ERROR] Full frame selection failed.")
+            self.current_roi = (0, 0, 1936, 1096)
         elif selection == "640x480":
             self.current_roi = (x, y, 640, 480)
-            print(f"[ROI] Set to 640x480 at position ({x}, {y})")
         elif selection == "320x240":
             self.current_roi = (x, y, 320, 240)
-            print(f"[ROI] Set to 320x240 at position ({x}, {y})")
-
 
     def connect_camera(self):
         try:
@@ -206,18 +179,18 @@ class CameraApp:
                 messagebox.showerror("Error", "No cameras found.")
                 self.master.destroy()
                 return
-        
+
             self.camera = asi.Camera(0)
             self.camera.set_control_value(asi.ASI_HIGH_SPEED_MODE, 1)
             self.camera.set_image_type(asi.ASI_IMG_RAW8)
-            self.camera.set_roi(width=320, height=240)  # Full frame
+            self.camera.set_roi(width=320, height=240)
             gain_value = int(self.gain_entry.get())
             exposure_time = int(self.exposure_entry.get())
             self.camera.set_control_value(asi.ASI_GAIN, gain_value)
             self.camera.set_control_value(asi.ASI_EXPOSURE, exposure_time)
 
             self.camera_initialized = True
-            print("Camera Ready")  # Just print instead of showing a popup
+            print("Camera Ready")
         except Exception as e:
             messagebox.showerror("Connection Failed", str(e))
 
@@ -231,7 +204,7 @@ class CameraApp:
             gain_value = int(self.gain_entry.get())
             exposure_time = int(self.exposure_entry.get())
         except ValueError:
-            messagebox.showerror("Error", "Please enter valid integers for gain and exposure.")
+            messagebox.showerror("Error", "Invalid gain/exposure.")
             return
 
         try:
@@ -240,6 +213,7 @@ class CameraApp:
 
             self.camera.start_video_capture()
             self.streaming = True
+            self.live_captured_frames = []  # Start a new buffer
             self.stop_button.config(state=tk.NORMAL)
             self.start_button.config(state=tk.DISABLED)
             self.update_feed()
@@ -247,18 +221,13 @@ class CameraApp:
             messagebox.showerror("Capture Failed", str(e))
 
     def stop_feed(self):
-        if self.stream_start_time:
-            duration = time.time() - self.stream_start_time
-            print(f"[INFO] Video feed duration: {duration:.2f} seconds")
-            self.stream_start_time = None
         if self.streaming:
             try:
                 self.camera.stop_video_capture()
                 self.streaming = False
                 self.start_button.config(state=tk.NORMAL)
                 self.stop_button.config(state=tk.DISABLED)
-                print("Video feed stopped.")
-        
+                print("[INFO] Feed stopped.")
             except Exception as e:
                 messagebox.showerror("Stop Failed", str(e))
 
@@ -268,13 +237,16 @@ class CameraApp:
                 frame = self.camera.capture_video_frame()
                 if frame is not None:
                     self.display_frame(frame)
+                    if not hasattr(self, 'live_captured_frames'):
+                        self.live_captured_frames = []
+                    self.live_captured_frames.append(frame)
+                    if len(self.live_captured_frames) > 5000:
+                        self.live_captured_frames.pop(0)
             except Exception as e:
-                print(f"[ERROR] Update feed failed: {e}")
-
-            self.master.after(30, self.update_feed)
+                print(f"[ERROR] update_feed: {e}")
+            self.master.after(10, self.update_feed)
 
     def display_frame(self, frame):
-        # Convert the frame to an ImageTk format
         image = Image.fromarray(frame)
         image_tk = ImageTk.PhotoImage(image)
         self.video_frame.imgtk = image_tk
@@ -287,44 +259,34 @@ class CameraApp:
         try:
             frames = []
             num_frames = int(self.frames_entry.get())
-            print(f"[INFO] Capturing {num_frames} frames for sanity check...")
+            print(f"[INFO] Capturing {num_frames} sanity frames...")
 
             for i in range(num_frames):
                 frame = self.camera.capture_video_frame()
                 if frame is not None:
                     frames.append(frame)
-                else:
-                    print(f"[WARN] Frame {i} is None")
-            self.last_captured_frames = frames  # *** CHANGED/ADDED: Save last frames for later use ***
-            print(f"[INFO] Captured {len(frames)} frames.")
-
-            # Show frame rate
-            duration = num_frames / self.get_target_rate()
-            actual_fps = len(frames) / duration
-            print(f"[INFO] Actual FPS: {actual_fps:.2f}")
-
-            # Save the last frames automatically? Or via button? Up to you.
+            self.sanity_frames = frames  # Separate buffer
+            print(f"[INFO] Captured {len(frames)} sanity frames.")
         except Exception as e:
             print(f"[ERROR] Sanity check failed: {e}")
 
-    # *** CHANGED/ADDED: Save last frames button callback ***
     def save_last_frames(self):
-        if hasattr(self, 'last_captured_frames') and self.last_captured_frames:
+        self.stop_feed()
+        if hasattr(self, 'live_captured_frames') and self.live_captured_frames:
             metadata = {
                 "gain": self.gain_entry.get(),
                 "exposure": self.exposure_entry.get(),
                 "roi": str(self.current_roi),
                 "target_fps": self.target_entry.get(),
-                "frame_count": len(self.last_captured_frames),
+                "frame_count": len(self.live_captured_frames),
                 "timestamp": time.strftime("%Y-%m-%d %H:%M:%S")
             }
-            self.save_capture_data_to_h5(self.last_captured_frames, metadata)
+            self.save_capture_data_to_h5(self.live_captured_frames, metadata)
         else:
-            print("[INFO] No captured frames to save.")
+            messagebox.showinfo("No Frames", "No frames have been captured during live feed.")
 
     def save_capture_data_to_h5(self, frames, metadata):
         try:
-            # *** CHANGED/ADDED: Use file dialog to get save location ***
             filename = filedialog.asksaveasfilename(
                 title="Save capture data",
                 defaultextension=".h5",
@@ -335,11 +297,8 @@ class CameraApp:
                 return
 
             with h5py.File(filename, 'w') as h5f:
-                # Save metadata as attributes
                 for key, value in metadata.items():
                     h5f.attrs[key] = value
-                
-                # Save frames as dataset
                 h5f.create_dataset('frames', data=np.array(frames), compression="gzip")
             print(f"[INFO] Data saved to {filename}")
         except Exception as e:

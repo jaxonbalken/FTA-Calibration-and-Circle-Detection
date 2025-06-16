@@ -4,7 +4,7 @@ import time
 import csv
 import traceback
 import ctypes.wintypes
-
+from tkinter.filedialog import askopenfilename
 import tkinter as tk
 from tkinter import messagebox 
 from tkinter import filedialog # Explicit imports, no wildcard
@@ -56,26 +56,26 @@ class CameraApp:
         self.exposure_entry.pack()
 
         #Target Rate input
-        self.target_label = tk.Label(master, text= 'Target Rate (fps)') 
+        self.target_label = tk.Label(master, text= 'Playback Speed (fps)') 
         self.target_label.pack()
         self.target_entry = tk.Entry(master)
-        self.target_entry.insert(100, '100')
+        self.target_entry.insert(30, '30')
         self.target_entry.pack()
 
         # Frame Rate Buttons
         self.framerate_button_frame = tk.Frame(master)
         self.framerate_button_frame.pack()
-        preset_rates = [10, 30, 60, 100, 200]
+        preset_rates = [5,10, 30, 60, 100, 200]
         for rate in preset_rates:
             button = tk.Button(self.framerate_button_frame, text=f"{rate} fps", command=lambda r=rate: self.set_frame_rate(r))
             button.pack(side=tk.LEFT, padx=2, pady=2)
 
         #Number of frames input
-        self.frames_label = tk.Label(master, text= 'Number Of Frames') 
-        self.frames_label.pack()
-        self.frames_entry = tk.Entry(master)
-        self.frames_entry.insert(1000, '1000')
-        self.frames_entry.pack()
+        # self.frames_label = tk.Label(master, text= 'Number Of Frames') 
+        # self.frames_label.pack()
+        # self.frames_entry = tk.Entry(master)
+        # self.frames_entry.insert(1000, '1000')
+        # self.frames_entry.pack()
 
         # ROI Selection Dropdown
         tk.Label(master, text="Select ROI Preset:").pack()
@@ -121,6 +121,10 @@ class CameraApp:
 
         self.video_frame = tk.Label(master)
         self.video_frame.pack()
+
+        self.play_button = tk.Button(self.button_frame, text="Play Saved Video", command=self.play_saved_video)
+        self.play_button.pack(side=tk.LEFT, padx=5, pady=5)
+
 
     def dummy_command(self):
         print('Button Pressed')
@@ -259,6 +263,7 @@ class CameraApp:
     def stop_feed(self):
         if self.stream_start_time:
             duration = time.time() - self.stream_start_time
+            self.capture_duration = duration
             print(f"[INFO] Video feed duration: {duration:.2f} seconds")
             self.stream_start_time = None
         if self.streaming:
@@ -319,11 +324,7 @@ class CameraApp:
             # Update GUI frame
             self.video_frame.configure(image=imgtk)
             self.video_frame.image = imgtk  # prevent garbage collection
-            rate = self.get_target_rate()
-            frame_interval_us = 1e6 / rate
-            elapsed_us = (time.time() - frame_start_time) * 1e6
-            delay_ms = max(1, int((frame_interval_us - elapsed_us) / 1000))
-            self.master.after(delay_ms, self.update_feed)
+            self.master.after(1, self.update_feed)
 
         except Exception as e:
             print("\n[ERROR] Live feed failed.")
@@ -340,7 +341,7 @@ class CameraApp:
 
     def run_sanity_check(self):
         try:
-            num_frames = int(self.frames_entry.get())
+            num_frames = 1000
             
         except ValueError:
             num_frames = 100
@@ -363,6 +364,7 @@ class CameraApp:
             self.update_current_roi_from_ui()
             x, y, w, h = self.current_roi
             self.camera.set_roi(start_x=x, start_y=y, width=w, height=h)
+            print(f'[INFO] Using {num_frames} frames')
             print(f"[INFO] Using ROI for sanity check: Start({x},{y}), Size({w}x{h})")
             gain_value = int(self.gain_entry.get())
             exposure_time = int(self.exposure_entry.get())
@@ -392,17 +394,35 @@ class CameraApp:
     def save_last_frames(self):
         self.stop_feed()
         if hasattr(self, 'live_captured_frames') and self.live_captured_frames:
+            if hasattr(self, 'capture_duration') and self.capture_duration > 0:
+                actual_fps = len(self.live_captured_frames) / self.capture_duration
+            else:
+                actual_fps = "unknown"
+
             metadata = {
                 "gain": self.gain_entry.get(),
                 "exposure": self.exposure_entry.get(),
                 "roi": str(self.current_roi),
-                "target_fps": self.target_entry.get(),
+                "actual_fps": str(actual_fps),
                 "frame_count": len(self.live_captured_frames),
                 "timestamp": time.strftime("%Y-%m-%d %H:%M:%S")
             }
-            self.save_capture_data_to_h5(self.live_captured_frames, metadata)
+
+            filename = self.save_capture_data_to_h5(self.live_captured_frames, metadata)
+
+            if filename:
+                print("\n[VIDEO SAVED]")
+                print(f"File: {filename}")
+                print(f"Timestamp: {metadata['timestamp']}")
+                print(f"Gain: {metadata['gain']}")
+                print(f"Exposure: {metadata['exposure']} µs")
+                print(f"ROI: {metadata['roi']}")
+                print(f"Frame Count: {metadata['frame_count']}")
+                print(f"Actual FPS: {metadata['actual_fps']}")
+                print()
         else:
-            messagebox.showinfo("No Frames", "No frames have been captured during live feed.")
+            print("[INFO] No frames captured. Nothing to save.")
+
 
     def save_capture_data_to_h5(self, frames, metadata):
         try:
@@ -413,15 +433,90 @@ class CameraApp:
             )
             if not filename:
                 print("[INFO] Save cancelled.")
-                return
+                return None
 
             with h5py.File(filename, 'w') as h5f:
                 for key, value in metadata.items():
                     h5f.attrs[key] = value
                 h5f.create_dataset('frames', data=np.array(frames), compression="gzip")
             print(f"[INFO] Data saved to {filename}")
+            return filename
         except Exception as e:
             print(f"[ERROR] Saving failed: {e}")
+            return None
+
+    def play_saved_video(self):
+        from tkinter.filedialog import askopenfilename
+
+        file_path = askopenfilename(
+            title="Select HDF5 File",
+            filetypes=[("HDF5 files", "*.h5 *.hdf5"), ("All files", "*.*")]
+        )
+
+        if not file_path:
+            print("[INFO] Playback cancelled.")
+            return
+
+        if not os.path.exists(file_path):
+            messagebox.showerror("File Error", f"File not found: {file_path}")
+            return
+
+        try:
+            with h5py.File(file_path, 'r') as f:
+                if 'frames' not in f:
+                    messagebox.showerror("Data Error", "'frames' dataset not found.")
+                    return
+                frames = f['frames'][:]
+                # Try reading the stored capture FPS
+                capture_fps = float(f.attrs.get('actual_fps', 120))  # fallback default if not stored
+
+            frame_count = len(frames)
+
+            # === Get current GUI playback rate ===
+            try:
+                playback_fps = int(self.target_entry.get())
+            except ValueError:
+                playback_fps = 30  # fallback
+
+            slowdown_factor = capture_fps / playback_fps
+            delay = int(1000 / playback_fps)
+            original_duration = frame_count / capture_fps
+            expected_playback_duration = frame_count / playback_fps
+
+            print(f"\n[PLAYBACK INFO]")
+            print(f"File: {os.path.basename(file_path)}")
+            print(f"Frames: {frame_count}")
+            print(f"Original FPS (from file): {capture_fps:.2f}")
+            print(f"Playback FPS (from GUI): {playback_fps}")
+            print(f"Slowdown Factor: {slowdown_factor:.2f}x")
+            print(f"Original Duration: {original_duration:.2f} sec")
+            print(f"Expected Playback Duration: {expected_playback_duration:.2f} sec")
+            print("Press 'q' to quit playback early.\n")
+
+            start_time = time.time()
+
+            for i, frame in enumerate(frames):
+                cv2.imshow("Slow Motion Playback - Press 'q' to Quit", frame)
+                key = cv2.waitKey(delay)
+                if key == ord('q') or key == 27:
+                    print("[INFO] Playback stopped by user.")
+                    break
+
+            end_time = time.time()
+            actual_duration = end_time - start_time
+            actual_fps = frame_count / actual_duration if actual_duration > 0 else 0
+
+            cv2.destroyAllWindows()
+
+            print(f"\n[INFO] Playback finished.")
+            print(f"[INFO] Actual Playback Time: {actual_duration:.2f} sec")
+            print(f"[INFO] Actual FPS: {actual_fps:.2f}")
+            print(f"[INFO] Actual Slowdown Factor: {capture_fps / actual_fps:.2f}x")
+
+        except Exception as e:
+            messagebox.showerror("Playback Error", str(e))
+            print(f"[ERROR] Playback failed: {e}")
+
 
 
 if __name__ == "__main__":
