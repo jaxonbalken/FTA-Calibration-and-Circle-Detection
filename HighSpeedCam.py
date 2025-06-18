@@ -79,7 +79,7 @@ class CameraApp:
 
         # ROI Selection Dropdown
         tk.Label(master, text="Select ROI Preset:").pack()
-        self.roi_options = ["Full Frame", "640x480", "320x240"]
+        self.roi_options = ["Full Frame", "640x480", "320x240", "424x318"]
         self.selected_roi = tk.StringVar(master)
         self.selected_roi.set(self.roi_options[1])
         tk.OptionMenu(master, self.selected_roi, *self.roi_options, command=self.handle_roi_selection).pack()
@@ -556,9 +556,12 @@ class CameraApp:
                     frame_start = time.time()
                     print(f"\n--- Frame {i+1} ---")
 
-                    # Threshold for binary mask
+                    # Apply thresholding
                     ret, thresh = cv2.threshold(frame, 127, 255, 0)
                     M = cv2.moments(thresh)
+
+                    # Convert to BGR for display
+                    debug_frame = cv2.cvtColor(frame, cv2.COLOR_GRAY2BGR)
 
                     if M["m00"] != 0:
                         cX = int(M["m10"] / M["m00"])
@@ -578,15 +581,30 @@ class CameraApp:
 
                         last_centroid = (cX, cY)
 
+                        # Draw the centroid
+                        cv2.circle(debug_frame, (cX, cY), 4, (0, 0, 255), -1)
                     else:
                         centroids.append((None, None))
                         movements.append(0)
                         print("[Centroid] Not detected — empty or invalid frame.")
 
-                    frame_end = time.time()
-                    frame_time = frame_end - frame_start
-                    print(f"[Timing] Frame processing time: {frame_time:.4f} sec")
+                    # Add frame number for context
+                    cv2.putText(debug_frame, f"Frame: {i+1}", (10, 25),
+                                cv2.FONT_HERSHEY_SIMPLEX, 0.7, (255, 255, 255), 1)
 
+                    # Show live debug window
+                    cv2.imshow("Centroid Debug Preview", debug_frame)
+                    key = cv2.waitKey(1)
+                    if key == 27:  # Esc key to exit preview early
+                        print("[INFO] Debug preview interrupted by user.")
+                        break
+
+                    frame_end = time.time()
+                    print(f"[Timing] Frame processing time: {frame_end - frame_start:.4f} sec")
+
+                cv2.destroyAllWindows()
+
+                # Summary
                 total_end = time.time()
                 total_time = total_end - total_start
                 avg_movement = np.mean([m for m in movements if m is not None])
@@ -601,7 +619,7 @@ class CameraApp:
                 print(f"Average Per Frame: {total_time / len(frames):.4f} seconds")
                 print(f"==============================\n")
 
-                   # Ask if user wants to save
+                # Save CSV
                 save_prompt = input("Do you want to save the centroid data to a CSV file? (y/n): ").strip().lower()
                 if save_prompt == 'y':
                     csv_path = file_path.replace('.h5', '_centroids.csv')
@@ -618,6 +636,7 @@ class CameraApp:
         except Exception as e:
             print(f"[ERROR] Centroid analysis failed: {e}")
             traceback.print_exc()
+
 
 
     def find_centroid_in_current_frame(self):
