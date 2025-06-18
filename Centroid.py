@@ -361,7 +361,7 @@ class ImageProcessorApp:
             self.processed_image = output #assign value to new image so it can be displayed. idk why i did this i realize now that this is not needed 
             self.display_image(self.processed_image, self.frame_processed)
             #self.update_plot()  # Update the existing plot with new data
-            print(f'Dinstance From Target: {targetdist} pixels, or {targetdist * pixel_size}')
+            #print(f'Dinstance From Target: {targetdist} pixels, or {targetdist * pixel_size}')
         
             
             if len(self.circle_centers) > 1:

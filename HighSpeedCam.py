@@ -125,6 +125,12 @@ class CameraApp:
         self.play_button = tk.Button(self.button_frame, text="Play Saved Video", command=self.play_saved_video)
         self.play_button.pack(side=tk.LEFT, padx=5, pady=5)
 
+        self.analyze_button = tk.Button(self.button_frame, text="Analyze Centroids", command=self.analyze_saved_centroids)
+        self.analyze_button.pack(side=tk.LEFT, padx=5, pady=5)
+
+        tk.Button(master, text="Find Centroid", command=self.find_centroid_in_current_frame).pack(pady=5)
+
+
 
     def dummy_command(self):
         print('Button Pressed')
@@ -306,6 +312,7 @@ class CameraApp:
             frame = np.frombuffer(buffer, dtype=np.uint8).reshape((height, width))
 
             # Resize for display
+            
             frame_resized = cv2.resize(frame, (640, 480))
 
             #reset roi to involve target
@@ -516,6 +523,150 @@ class CameraApp:
         except Exception as e:
             messagebox.showerror("Playback Error", str(e))
             print(f"[ERROR] Playback failed: {e}")
+    
+    
+
+
+    def analyze_saved_centroids(self):
+        file_path = filedialog.askopenfilename(
+            title="Select HDF5 File for Centroid Analysis",
+            filetypes=[("HDF5 files", "*.h5 *.hdf5"), ("All files", "*.*")]
+        )
+
+        if not file_path or not os.path.exists(file_path):
+            print("[INFO] No file selected or file not found.")
+            return
+
+        try:
+            with h5py.File(file_path, 'r') as f:
+                if 'frames' not in f:
+                    messagebox.showerror("Error", "No 'frames' dataset found in the file.")
+                    return
+
+                frames = f['frames'][:]
+                print(f"\n[INFO] Loaded {len(frames)} frames from {file_path}")
+
+                centroids = []
+                movements = []
+                last_centroid = None
+
+                total_start = time.time()
+
+                for i, frame in enumerate(frames):
+                    frame_start = time.time()
+                    print(f"\n--- Frame {i+1} ---")
+
+                    # Threshold for binary mask
+                    ret, thresh = cv2.threshold(frame, 127, 255, 0)
+                    M = cv2.moments(thresh)
+
+                    if M["m00"] != 0:
+                        cX = int(M["m10"] / M["m00"])
+                        cY = int(M["m01"] / M["m00"])
+                        centroids.append((cX, cY))
+                        print(f"[Centroid] (X: {cX}, Y: {cY})")
+
+                        if last_centroid:
+                            dx = cX - last_centroid[0]
+                            dy = cY - last_centroid[1]
+                            dist = np.sqrt(dx**2 + dy**2)
+                            print(f"[Motion] ΔX: {dx}, ΔY: {dy}, Distance: {dist:.2f} pixels")
+                            movements.append(dist)
+                        else:
+                            print("[Motion] First valid centroid, no motion calculated.")
+                            movements.append(0)
+
+                        last_centroid = (cX, cY)
+
+                    else:
+                        centroids.append((None, None))
+                        movements.append(0)
+                        print("[Centroid] Not detected — empty or invalid frame.")
+
+                    frame_end = time.time()
+                    frame_time = frame_end - frame_start
+                    print(f"[Timing] Frame processing time: {frame_time:.4f} sec")
+
+                total_end = time.time()
+                total_time = total_end - total_start
+                avg_movement = np.mean([m for m in movements if m is not None])
+                max_movement = np.max([m for m in movements if m is not None])
+
+                print(f"\n========== SUMMARY ==========")
+                print(f"Total Frames: {len(frames)}")
+                print(f"Frames with Valid Centroid: {len([c for c in centroids if c != (None, None)])}")
+                print(f"Average Movement: {avg_movement:.2f} pixels")
+                print(f"Max Movement: {max_movement:.2f} pixels")
+                print(f"Total Processing Time: {total_time:.2f} seconds")
+                print(f"Average Per Frame: {total_time / len(frames):.4f} seconds")
+                print(f"==============================\n")
+
+                   # Ask if user wants to save
+                save_prompt = input("Do you want to save the centroid data to a CSV file? (y/n): ").strip().lower()
+                if save_prompt == 'y':
+                    csv_path = file_path.replace('.h5', '_centroids.csv')
+                    with open(csv_path, 'w', newline='') as csvfile:
+                        writer = csv.writer(csvfile)
+                        writer.writerow(['Frame', 'Centroid_X', 'Centroid_Y', 'Movement (pixels)'])
+                        for i, (centroid, move) in enumerate(zip(centroids, movements)):
+                            x, y = centroid if centroid != (None, None) else ('None', 'None')
+                            writer.writerow([i, x, y, move])
+                    print(f"[INFO] CSV saved to:\n{csv_path}")
+                else:
+                    print("[INFO] CSV not saved.")
+
+        except Exception as e:
+            print(f"[ERROR] Centroid analysis failed: {e}")
+            traceback.print_exc()
+
+
+    def find_centroid_in_current_frame(self):
+        if not hasattr(self, 'live_captured_frames') or not self.live_captured_frames:
+            messagebox.showwarning("No Frame", "No frames captured yet.")
+            return
+
+        frame = self.live_captured_frames[-1].copy()
+        try:
+            start_time = time.time()
+
+            # Threshold to binary
+            ret, thresh = cv2.threshold(frame, 127, 255, 0)
+
+            # Compute moments
+            M = cv2.moments(thresh)
+
+            if M["m00"] == 0:
+                messagebox.showerror("Centroid Error", "Unable to compute centroid (m00 is zero).")
+                return
+
+            cX = int(M["m10"] / M["m00"])
+            cY = int(M["m01"] / M["m00"])
+
+            # Print for debug
+            print(f"[CENTROID] Found at: ({cX}, {cY})")
+
+            # Update UI fields
+            self.roi_startx.delete(0, tk.END)
+            self.roi_startx.insert(0, str(cX))
+
+            self.roi_starty.delete(0, tk.END)
+            self.roi_starty.insert(0, str(cY))
+
+            # Visualize result in OpenCV
+            annotated = cv2.cvtColor(frame, cv2.COLOR_GRAY2BGR)
+            cv2.circle(annotated, (cX, cY), 10, (0, 0, 255), 2)
+            cv2.putText(annotated, f"Centroid: ({cX}, {cY})", (cX + 15, cY + 15),
+                        cv2.FONT_HERSHEY_SIMPLEX, 0.5, (255, 255, 255), 1)
+            cv2.imshow("Detected Centroid", annotated)
+            cv2.waitKey(500)
+            cv2.destroyAllWindows()
+
+            duration = time.time() - start_time
+            print(f"[INFO] Centroid detection took {duration:.3f} seconds.")
+
+        except Exception as e:
+            print(f"[ERROR] Failed to find centroid: {e}")
+            traceback.print_exc()
 
 
 

@@ -135,6 +135,7 @@ def connect_cams_callback():
         toolbar.update() 
         # placing the toolbar on the Tkinter window 
         canvas.get_tk_widget().pack(side='top') 
+        print('Camera Connected')
         
         return 
         
