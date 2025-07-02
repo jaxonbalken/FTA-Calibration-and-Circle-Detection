@@ -1,0 +1,32 @@
+PIPP (v2.5.9) Logfile
+
+Command line arguments:
+  -gui
+  -dark
+  -flat
+  -flat_dark
+  -raw_db=0
+  -raw_ocs=0
+  -raw_hl=1
+  -anim_fwd
+  -osubdir=
+  -od=C:\Users\ASE\Documents\GitHub\FTA-Calibration-and-Circle-Detection\MP4 Files
+  -op=HighSpeedTest
+  -os=_pipp
+  -avi
+  -avi_codec=0
+  -auto_fps
+  -fps_rate=60
+  -fps_scale=1
+  -temp_dir=C:\Users\ASE\AppData\Local\Temp\pipp_xsorol0d.hh4
+
+Source image files:
+  C:\Users\ASE\Documents\GitHub\FTA-Calibration-and-Circle-Detection\MP4 Files\Test\020725\2025-07-02-1921_4-U-L-Test.ser
+
+Summary:
+PIPP version: v2.5.9
+  Total input frames: 3000
+  Total output frames: 3000:
+  Output Frame Type: Monochrome
+  Output Frame Format: AVI
+  Output Directory: C:/Users/ASE/Documents/GitHub/FTA-Calibration-and-Circle-Detection/MP4 Files/

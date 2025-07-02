@@ -1,4 +1,5 @@
 import os
+
 import sys
 import time
 import csv
@@ -79,9 +80,9 @@ class CameraApp:
 
         # ROI Selection Dropdown
         tk.Label(master, text="Select ROI Preset:").pack()
-        self.roi_options = ["Full Frame", "640x480", "320x240", "424x318"]
+        self.roi_options = ["Full Frame", "640x480", "320x240", "424x318", "64x48", "32x24"]
         self.selected_roi = tk.StringVar(master)
-        self.selected_roi.set(self.roi_options[1])
+        self.selected_roi.set(self.roi_options[0])
         tk.OptionMenu(master, self.selected_roi, *self.roi_options, command=self.handle_roi_selection).pack()
 
         # ROI Position Control
@@ -224,11 +225,14 @@ class CameraApp:
             self.camera = asi.Camera(0)
             self.camera.set_control_value(asi.ASI_HIGH_SPEED_MODE, 1)
             self.camera.set_image_type(asi.ASI_IMG_RAW8)
-            self.camera.set_roi(width=320, height=240) 
+            self.camera.set_roi(width=1936, height=1096) 
             gain_value = int(self.gain_entry.get())
             exposure_time = int(self.exposure_entry.get())
             self.camera.set_control_value(asi.ASI_GAIN, gain_value)
             self.camera.set_control_value(asi.ASI_EXPOSURE, exposure_time)
+
+            #NEW AADDITION
+            self.camera.set_roi(bins = 2)
 
             self.camera_initialized = True
             print("Camera Ready")  # Just print instead of showing a popup
@@ -529,113 +533,154 @@ class CameraApp:
 
     def analyze_saved_centroids(self):
         file_path = filedialog.askopenfilename(
-            title="Select HDF5 File for Centroid Analysis",
-            filetypes=[("HDF5 files", "*.h5 *.hdf5"), ("All files", "*.*")]
+            title="Select HDF5 or AVI File for Centroid Analysis",
+            filetypes=[("HDF5 and AVI files", "*.h5 *.hdf5 *.avi"), ("All files", "*.*")]
         )
 
         if not file_path or not os.path.exists(file_path):
             print("[INFO] No file selected or file not found.")
             return
 
+        is_hdf5 = file_path.lower().endswith(('.h5', '.hdf5'))
+        is_avi = file_path.lower().endswith('.avi')
+
+        frames = []
         try:
-            with h5py.File(file_path, 'r') as f:
-                if 'frames' not in f:
-                    messagebox.showerror("Error", "No 'frames' dataset found in the file.")
+            if is_hdf5:
+                with h5py.File(file_path, 'r') as f:
+                    if 'frames' not in f:
+                        messagebox.showerror("Error", "No 'frames' dataset found in the HDF5 file.")
+                        return
+                    frames = f['frames'][:]
+                    capture_fps = getattr(self, 'capture_fps', float(f.attrs.get('actual_fps', 120)))
+
+            elif is_avi:
+                cap = cv2.VideoCapture(file_path)
+                if not cap.isOpened():
+                    messagebox.showerror("Error", "Failed to open AVI file.")
                     return
-
-                frames = f['frames'][:]
-                print(f"\n[INFO] Loaded {len(frames)} frames from {file_path}")
-
-                centroids = []
-                movements = []
-                last_centroid = None
-
-                total_start = time.time()
-
-                for i, frame in enumerate(frames):
-                    frame_start = time.time()
-                    print(f"\n--- Frame {i+1} ---")
-
-                    # Apply thresholding
-                    ret, thresh = cv2.threshold(frame, 127, 255, 0)
-                    M = cv2.moments(thresh)
-
-                    # Convert to BGR for display
-                    debug_frame = cv2.cvtColor(frame, cv2.COLOR_GRAY2BGR)
-
-                    if M["m00"] != 0:
-                        cX = int(M["m10"] / M["m00"])
-                        cY = int(M["m01"] / M["m00"])
-                        centroids.append((cX, cY))
-                        print(f"[Centroid] (X: {cX}, Y: {cY})")
-
-                        if last_centroid:
-                            dx = cX - last_centroid[0]
-                            dy = cY - last_centroid[1]
-                            dist = np.sqrt(dx**2 + dy**2)
-                            print(f"[Motion] ΔX: {dx}, ΔY: {dy}, Distance: {dist:.2f} pixels")
-                            movements.append(dist)
-                        else:
-                            print("[Motion] First valid centroid, no motion calculated.")
-                            movements.append(0)
-
-                        last_centroid = (cX, cY)
-
-                        # Draw the centroid
-                        cv2.circle(debug_frame, (cX, cY), 4, (0, 0, 255), -1)
-                    else:
-                        centroids.append((None, None))
-                        movements.append(0)
-                        print("[Centroid] Not detected — empty or invalid frame.")
-
-                    # Add frame number for context
-                    cv2.putText(debug_frame, f"Frame: {i+1}", (10, 25),
-                                cv2.FONT_HERSHEY_SIMPLEX, 0.7, (255, 255, 255), 1)
-
-                    # Show live debug window
-                    cv2.imshow("Centroid Debug Preview", debug_frame)
-                    key = cv2.waitKey(1)
-                    if key == 27:  # Esc key to exit preview early
-                        print("[INFO] Debug preview interrupted by user.")
+                while True:
+                    ret, frame = cap.read()
+                    if not ret:
                         break
+                    gray = cv2.cvtColor(frame, cv2.COLOR_BGR2GRAY)
+                    frames.append(gray)
+                cap.release()
+                capture_fps = getattr(self, 'capture_fps', 120.0)  # Default if not in HDF5
 
-                    frame_end = time.time()
-                    print(f"[Timing] Frame processing time: {frame_end - frame_start:.4f} sec")
+            else:
+                messagebox.showerror("Error", "Unsupported file format.")
+                return
 
-                cv2.destroyAllWindows()
+            print(f"\n[INFO] Loaded {len(frames)} frames from {file_path}")
 
-                # Summary
-                total_end = time.time()
-                total_time = total_end - total_start
-                avg_movement = np.mean([m for m in movements if m is not None])
-                max_movement = np.max([m for m in movements if m is not None])
+            centroids = []
+            movements = []
+            movement_x = []
+            movement_y = []
+            last_centroid = None
+            total_start = time.time()
 
-                print(f"\n========== SUMMARY ==========")
-                print(f"Total Frames: {len(frames)}")
-                print(f"Frames with Valid Centroid: {len([c for c in centroids if c != (None, None)])}")
-                print(f"Average Movement: {avg_movement:.2f} pixels")
-                print(f"Max Movement: {max_movement:.2f} pixels")
-                print(f"Total Processing Time: {total_time:.2f} seconds")
-                print(f"Average Per Frame: {total_time / len(frames):.4f} seconds")
-                print(f"==============================\n")
+            for i, frame in enumerate(frames):
+                frame_start = time.time()
+                print(f"\n--- Frame {i+1} ---")
 
-                # Save CSV
-                save_prompt = input("Do you want to save the centroid data to a CSV file? (y/n): ").strip().lower()
-                if save_prompt == 'y':
-                    csv_path = file_path.replace('.h5', '_centroids.csv')
-                    with open(csv_path, 'w', newline='') as csvfile:
-                        writer = csv.writer(csvfile)
-                        writer.writerow(['Frame', 'Centroid_X', 'Centroid_Y', 'Movement (pixels)'])
-                        for i, (centroid, move) in enumerate(zip(centroids, movements)):
-                            x, y = centroid if centroid != (None, None) else ('None', 'None')
-                            writer.writerow([i, x, y, move])
-                    print(f"[INFO] CSV saved to:\n{csv_path}")
+                ret, thresh = cv2.threshold(frame, 127, 255, 0)
+                M = cv2.moments(thresh)
+                debug_frame = cv2.cvtColor(frame, cv2.COLOR_GRAY2BGR)
+
+                if M["m00"] != 0:
+                    cX = int(M["m10"] / M["m00"])
+                    cY = int(M["m01"] / M["m00"])
+                    centroids.append((cX, cY))
+                    print(f"[Centroid] (X: {cX}, Y: {cY})")
+
+                    if last_centroid:
+                        dx = cX - last_centroid[0]
+                        dy = cY - last_centroid[1]
+                        dist = np.sqrt(dx**2 + dy**2)
+                        print(f"[Motion] ΔX: {dx}, ΔY: {dy}, Distance: {dist:.2f} pixels")
+                        movement_x.append(dx)
+                        movement_y.append(dy)
+                        movements.append(dist)
+                    else:
+                        print("[Motion] First valid centroid, no motion calculated.")
+                        movement_x.append(0)
+                        movement_y.append(0)
+                        movements.append(0)
+
+                    last_centroid = (cX, cY)
+                    cv2.circle(debug_frame, (cX, cY), 4, (0, 0, 255), -1)
                 else:
-                    print("[INFO] CSV not saved.")
+                    centroids.append((None, None))
+                    movement_x.append(0)
+                    movement_y.append(0)
+                    movements.append(0)
+                    print("[Centroid] Not detected — empty or invalid frame.")
+
+                cv2.putText(debug_frame, f"Frame: {i+1}", (10, 25),
+                            cv2.FONT_HERSHEY_SIMPLEX, 0.7, (255, 255, 255), 1)
+
+                cv2.imshow("Centroid Debug Preview", debug_frame)
+                key = cv2.waitKey(1)
+                if key == 27:  # ESC
+                    print("[INFO] Debug preview interrupted by user.")
+                    break
+
+                frame_end = time.time()
+                print(f"[Timing] Frame processing time: {frame_end - frame_start:.4f} sec")
+
+            cv2.destroyAllWindows()
+
+            total_end = time.time()
+            total_time = total_end - total_start
+            avg_movement = np.mean([m for m in movements if m is not None])
+            max_movement = np.max([m for m in movements if m is not None])
+
+            print(f"\n========== SUMMARY ==========")
+            print(f"Total Frames: {len(frames)}")
+            print(f"Frames with Valid Centroid: {len([c for c in centroids if c != (None, None)])}")
+            print(f"Average Movement: {avg_movement:.2f} pixels")
+            print(f"Max Movement: {max_movement:.2f} pixels")
+            print(f"Total Processing Time: {total_time:.2f} seconds")
+            print(f"Average Per Frame: {total_time / len(frames):.4f} seconds")
+            print(f"==============================\n")
+
+            # Ask to save CSV
+            save_prompt = input("Do you want to save the centroid data to a CSV file? (y/n): ").strip().lower()
+            if save_prompt == 'y':
+                csv_path = file_path.rsplit('.', 1)[0] + '_centroids.csv'
+                playback_fps = getattr(self, 'playback_fps', 30)
+                actual_playback_time = getattr(self, 'actual_playback_time', total_time)
+                actual_fps = getattr(self, 'actual_fps', playback_fps)
+                actual_slowdown_factor = getattr(self, 'actual_slowdown_factor', capture_fps / actual_fps if actual_fps else float('nan'))
+
+                with open(csv_path, 'w', newline='') as csvfile:
+                    writer = csv.writer(csvfile)
+                    writer.writerow(['Frame', 'Centroid_X', 'Centroid_Y',
+                                    'Movement_X (dX)', 'Movement_Y (dY)', 'Movement (pixels)',
+                                    'Original_FPS', 'Playback_FPS', 'Actual_Playback_Time_s',
+                                    'Actual_FPS', 'Actual_Slowdown_Factor'])
+
+                    for i, (centroid, dx, dy, move) in enumerate(zip(centroids, movement_x, movement_y, movements)):
+                        x, y = centroid if centroid != (None, None) else ('None', 'None')
+                        dx = dx if centroid != (None, None) else 'None'
+                        dy = dy if centroid != (None, None) else 'None'
+                        move = move if centroid != (None, None) else 'None'
+                        writer.writerow([
+                            i, x, y, dx, dy, move,
+                            capture_fps, playback_fps, actual_playback_time,
+                            actual_fps, actual_slowdown_factor
+                        ])
+                print(f"[INFO] CSV saved to:\n{csv_path}")
+            else:
+                print("[INFO] CSV not saved.")
 
         except Exception as e:
             print(f"[ERROR] Centroid analysis failed: {e}")
             traceback.print_exc()
+
+
 
 
 
@@ -694,4 +739,5 @@ if __name__ == "__main__":
     app = CameraApp(root)
     root.protocol("WM_DELETE_WINDOW", app.on_close)
     root.mainloop()
+
 
