@@ -1,0 +1,7 @@
+X Coord,Y Coord,Movement X (pixels),Movement Y (pixel),Microns Moved X,Microns Moved Y,X DAC Value,Y DAC Value,Microns Per ADU X,Microns Per ADU Y,Detected Circle Radii (pixel),Detected Pixel Size (microns/pixel)
+988,444,31,3,6510,630,N/A,N/A,N/A,N/A,37,210
+1019,441,35,0,7350,0,N/A,N/A,N/A,N/A,37,210
+984,441,7,16,1470,3360,N/A,N/A,N/A,N/A,37,210
+977,457,1,19,210,3990,N/A,N/A,N/A,N/A,37,210
+976,438,5,17,1050,3570,N/A,N/A,N/A,N/A,37,210
+981,455,N/A,N/A,N/A,N/A,N/A,N/A,N/A,N/A,37,210
