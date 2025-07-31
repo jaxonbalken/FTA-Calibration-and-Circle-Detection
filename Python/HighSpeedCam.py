@@ -52,7 +52,7 @@ class CameraApp:
         self.exposure_label = tk.Label(master, text="Exposure (µs):")
         self.exposure_label.pack()
         self.exposure_entry = tk.Entry(master)
-        self.exposure_entry.insert(30000, "30000")  # Default exposure
+        self.exposure_entry.insert(32, "32")  # Default exposure
         self.exposure_entry.pack()
 
         #Target Rate input
@@ -79,7 +79,7 @@ class CameraApp:
 
         # ROI Selection Dropdown
         tk.Label(master, text="Select ROI Preset:").pack()
-        self.roi_options = ["Full Frame", "640x480", "320x240", "424x318", "64x48", "32x24"]
+        self.roi_options = ["Full Frame", "640x480", "320x240", "424x318", "64x48", "32x24", "176x176"]
         self.selected_roi = tk.StringVar(master)
         self.selected_roi.set(self.roi_options[0])
         tk.OptionMenu(master, self.selected_roi, *self.roi_options, command=self.handle_roi_selection).pack()
@@ -185,7 +185,8 @@ class CameraApp:
             print(f"[DEBUG] ROI selection: {roi_str}, Tareget Center Coord: ({center_x}, {center_y})")
             if roi_str == "Full Frame":
                 # Full Frame will be set explicitly elsewhere using the camera info
-                full_width, full_height, _, _ = self.camera.get_roi_format()
+                full_width = 1936
+                full_height = 1096
                 self.current_roi = (0, 0, full_width, full_height)
                 print(f"[ROI] Full Frame: {full_width}x{full_height}")
             else:
@@ -231,7 +232,7 @@ class CameraApp:
             self.camera.set_control_value(asi.ASI_EXPOSURE, exposure_time)
 
             #NEW AADDITION
-            self.camera.set_roi(bins = 2)
+            #self.camera.set_roi(bins = 2)
 
             self.camera_initialized = True
             print("Camera Ready")  # Just print instead of showing a popup
@@ -323,7 +324,7 @@ class CameraApp:
             if not hasattr(self, 'live_captured_frames'):
                 self.live_captured_frames = []
             self.live_captured_frames.append(frame.copy())  # Save original (not resized) frame
-            if len(self.live_captured_frames) > 5000:
+            if len(self.live_captured_frames) > 200000:
                 self.live_captured_frames.pop(0)
 
 
@@ -662,10 +663,10 @@ class CameraApp:
                                     'Actual_FPS', 'Actual_Slowdown_Factor'])
 
                     for i, (centroid, dx, dy, move) in enumerate(zip(centroids, movement_x, movement_y, movements)):
-                        x, y = centroid if centroid != (None, None) else ('None', 'None')
-                        dx = dx if centroid != (None, None) else 'None'
-                        dy = dy if centroid != (None, None) else 'None'
-                        move = move if centroid != (None, None) else 'None'
+                        x, y = centroid if centroid != (None, None) else ('', '')
+                        dx = dx if centroid != (None, None) else ''
+                        dy = dy if centroid != (None, None) else ''
+                        move = move if centroid != (None, None) else ''
                         writer.writerow([
                             i, x, y, dx, dy, move,
                             capture_fps, playback_fps, actual_playback_time,
