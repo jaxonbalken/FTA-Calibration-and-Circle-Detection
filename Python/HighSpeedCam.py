@@ -79,7 +79,7 @@ class CameraApp:
 
         # ROI Selection Dropdown
         tk.Label(master, text="Select ROI Preset:").pack()
-        self.roi_options = ["Full Frame", "640x480", "320x240", "424x318", "64x48", "32x24", "176x176"]
+        self.roi_options = ["Full Frame", "640x480", "320x240", "424x318", "64x48", "32x24", "176x176", '192x160']
         self.selected_roi = tk.StringVar(master)
         self.selected_roi.set(self.roi_options[0])
         tk.OptionMenu(master, self.selected_roi, *self.roi_options, command=self.handle_roi_selection).pack()
@@ -89,10 +89,10 @@ class CameraApp:
         self.roi_pos_frame = tk.Frame(master)
         self.roi_pos_frame.pack()
         self.roi_startx = tk.Entry(self.roi_pos_frame, width=5)
-        self.roi_startx.insert(968, "968")
+        self.roi_startx.insert(820, "820")
         self.roi_startx.pack(side=tk.LEFT)
         self.roi_starty = tk.Entry(self.roi_pos_frame, width=5)
-        self.roi_starty.insert(548, "548")
+        self.roi_starty.insert(540, "540")
         self.roi_starty.pack(side=tk.LEFT)
         tk.Button(master, text="Set ROI Position", command=self.set_roi_position).pack(pady=5)
 
@@ -690,38 +690,64 @@ class CameraApp:
             return
 
         frame = self.live_captured_frames[-1].copy()
+
         try:
             start_time = time.time()
 
-            # Threshold to binary
+            # Get current ROI coordinates
+            x, y, w, h = self.current_roi
+            print(f"[ROI] Current: Start=({x}, {y}), Size=({w}x{h})")
+
+            # Crop ROI from the frame
+            roi_frame = frame[y:y + h, x:x + w]
+
+            # Threshold the ROI to binary
             ret, thresh = cv2.threshold(frame, 127, 255, 0)
 
-            # Compute moments
+            # Compute moments on ROI
             M = cv2.moments(thresh)
 
             if M["m00"] == 0:
                 messagebox.showerror("Centroid Error", "Unable to compute centroid (m00 is zero).")
                 return
 
+            # Centroid relative to ROI
             cX = int(M["m10"] / M["m00"])
             cY = int(M["m01"] / M["m00"])
+            print(f"[CENTROID] Relative to ROI: ({cX}, {cY})")
 
-            # Print for debug
-            print(f"[CENTROID] Found at: ({cX}, {cY})")
+            # Compute offset from center of ROI
+            roi_center_x = w // 2
+            roi_center_y = h // 2
 
-            # Update UI fields
+            offset_x = cX - roi_center_x
+            offset_y = cY - roi_center_y
+
+            print(f"[OFFSET] x: {offset_x}, y: {offset_y}")
+            center_x = int(self.roi_startx.get())
+            center_y = int(self.roi_starty.get())
+
+            new_roi_x = center_x + offset_x
+            new_roi_y = center_y + offset_y
+
+            # Update ROI and UI
+            self.current_roi = (new_roi_x, new_roi_y, w, h)
+
             self.roi_startx.delete(0, tk.END)
-            self.roi_startx.insert(0, str(cX))
+            self.roi_startx.insert(new_roi_x, str(new_roi_x))
 
             self.roi_starty.delete(0, tk.END)
-            self.roi_starty.insert(0, str(cY))
+            self.roi_starty.insert(0, str(new_roi_y))
 
-            # Visualize result in OpenCV
+            print(f'new_roi_x = {new_roi_x}')
+            print(f'new_roi_y = {new_roi_y}')
+            # For visualization: show centroid in the cropped ROI
             annotated = cv2.cvtColor(frame, cv2.COLOR_GRAY2BGR)
             cv2.circle(annotated, (cX, cY), 10, (0, 0, 255), 2)
             cv2.putText(annotated, f"Centroid: ({cX}, {cY})", (cX + 15, cY + 15),
                         cv2.FONT_HERSHEY_SIMPLEX, 0.5, (255, 255, 255), 1)
-            cv2.imshow("Detected Centroid", annotated)
+
+            cv2.imshow("Detected Centroid in ROI", annotated)
             cv2.waitKey(500)
             cv2.destroyAllWindows()
 
@@ -729,8 +755,7 @@ class CameraApp:
             print(f"[INFO] Centroid detection took {duration:.3f} seconds.")
 
         except Exception as e:
-            print(f"[ERROR] Failed to find centroid: {e}")
-            traceback.print_exc()
+            messagebox.showerror("Error", f"An error occurred: {e}")
 
 
 
