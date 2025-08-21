@@ -79,7 +79,7 @@ class CameraApp:
 
         # ROI Selection Dropdown
         tk.Label(master, text="Select ROI Preset:").pack()
-        self.roi_options = ["Full Frame", "640x480", "320x240", "424x318", "64x48", "32x24", "176x176", '192x160']
+        self.roi_options = ["Full Frame", "640x480", "320x240", "424x318", "64x48", "32x24", "176x176", '192x160', '72x180', '176x72']
         self.selected_roi = tk.StringVar(master)
         self.selected_roi.set(self.roi_options[0])
         tk.OptionMenu(master, self.selected_roi, *self.roi_options, command=self.handle_roi_selection).pack()
@@ -324,7 +324,7 @@ class CameraApp:
             if not hasattr(self, 'live_captured_frames'):
                 self.live_captured_frames = []
             self.live_captured_frames.append(frame.copy())  # Save original (not resized) frame
-            if len(self.live_captured_frames) > 200000:
+            if len(self.live_captured_frames) > 9000000:
                 self.live_captured_frames.pop(0)
 
 

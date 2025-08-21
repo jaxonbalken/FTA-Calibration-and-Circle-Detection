@@ -2,6 +2,7 @@ import pandas as pd
 import numpy as np
 import tkinter as tk
 from tkinter import filedialog
+import matplotlib.pyplot as plt
 import os
 
 def analyze_motion_from_csv():
@@ -38,6 +39,7 @@ def analyze_motion_from_csv():
         # Convert pixel to microns
         x = df_valid['Centroid_X'].to_numpy() * MICRONS_PER_PIXEL
         y = df_valid['Centroid_Y'].to_numpy() * MICRONS_PER_PIXEL
+        frames = df_valid['Frame'].to_numpy()
 
         # Compute displacement
         dx = np.diff(x)
@@ -75,6 +77,28 @@ def analyze_motion_from_csv():
         print("-- Acceleration --")
         print(f"Max acceleration: {np.max(np.abs(acc_per_frame2)):.2f} µm/frame² | {np.max(np.abs(acc_per_sec2)):.2f} µm/s²")
         print("==========================================\n")
+
+        # ======== PLOTTING ========
+        plt.figure(figsize=(12, 5))
+
+        # Plot X Position
+        plt.subplot(1, 2, 1)
+        plt.plot(frames, x, label="X Position", color="blue")
+        plt.xlabel("Frame")
+        plt.ylabel("X Position (µm)")
+        plt.title("X Centroid Position Over Time")
+        plt.grid(True)
+
+        # Plot Y Position
+        plt.subplot(1, 2, 2)
+        plt.plot(frames, y, label="Y Position", color="green")
+        plt.xlabel("Frame")
+        plt.ylabel("Y Position (µm)")
+        plt.title("Y Centroid Position Over Time")
+        plt.grid(True)
+
+        plt.tight_layout()
+        plt.show()
 
     except Exception as e:
         print(f"[ERROR] Failed to analyze motion: {e}")
